@@ -28,7 +28,7 @@ namespace Vertx
 		
 		protected class Styles
 		{
-			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon;
+			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
 			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel;
 
 			public readonly GUIContent wrapModeLabel = TrTextContent("Wrap Mode");
@@ -58,6 +58,7 @@ namespace Vertx
 				smallZoom = EditorGUIUtility.IconContent("PreTextureMipMapLow");
 				largeZoom = EditorGUIUtility.IconContent("PreTextureMipMapHigh");
 				alphaIcon = EditorGUIUtility.IconContent("PreTextureAlpha");
+				scaleIcon = EditorGUIUtility.IconContent("ViewToolZoom On");
 				RGBIcon = EditorGUIUtility.IconContent("PreTextureRGB");
 				previewButton = "preButton";
 				previewSlider = "preSlider";

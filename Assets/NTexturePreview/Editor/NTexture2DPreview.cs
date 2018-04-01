@@ -50,7 +50,9 @@ namespace Vertx
 			return target != null;
 		}
 
+		private float zoomLevel;
 		private float zoomMultiplier = 1;
+		private const float maxZoomNormalized = 3;
 		private bool hasDragged;
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
@@ -83,14 +85,19 @@ namespace Vertx
 				return;
 			}
 
-
+			if (r.width == 32 && r.height == 32 || r.width == 1 && r.height == 1)
+			{
+				//There seems to be some unhelpful layout and repaint steps that provide rect scales that are unhelpful...
+				return;
+			}
+			
 			// target can report zero sizes in some cases just after a parameter change;
 			// guard against that.
 			int texWidth = Mathf.Max(t.width, 1);
 			int texHeight = Mathf.Max(t.height, 1);
 
 			float mipLevel = GetMipLevelForRendering();
-			float zoomLevel = Mathf.Min(Mathf.Min(r.width / texWidth, r.height / texHeight), 1);
+			zoomLevel = Mathf.Min(Mathf.Min(r.width / texWidth, r.height / texHeight), 1);
 			Rect wantedRect = new Rect(r.x, r.y, texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
 
 			if (e.type == EventType.MouseDown)
@@ -100,8 +107,13 @@ namespace Vertx
 
 			if (e.type == EventType.MouseDrag)
 			{
-				if(r.width == 32 && r.height == 32)
+				//Don't allow dragging for zoomMultiplier 1
+				if (Math.Abs(zoomMultiplier - 1) < 0.001f)
+				{
+					e.Use();
 					return;
+				}
+
 				hasDragged = true;
 				m_Pos -= e.delta;
 				m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
@@ -119,10 +131,20 @@ namespace Vertx
 
 			if (e.type == EventType.ScrollWheel)
 			{
+				float zoomMultiplierLast = zoomMultiplier;
 				zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
-				
-				m_Pos += ConvertPositionToLocalTextureRect(r, e.mousePosition);
-				m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+				//Maximum 2x texture zoom
+				zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
+
+				//if zoom has changed
+				if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
+				{
+					//Focuses Center
+					Vector2 posNormalized = m_Pos / new Vector2(wantedRect.width, wantedRect.height);
+					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
+					m_Pos = newPos;
+					m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+				}
 				e.Use();
 				Repaint();
 			}
@@ -196,9 +218,10 @@ namespace Vertx
 
 		private Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
 		{
-			Vector2 textureRectTopLeft = new Vector2(r.width / 2f, r.height / 2f);
+			
+			Vector2 rectCenter = new Vector2(r.width / 2f, r.height / 2f);
 			Vector2 localPos = new Vector2(position.x - r.x, position.y - r.y);
-			localPos -= textureRectTopLeft;
+			localPos -= rectCenter;
 			return localPos;
 		}
 
@@ -271,6 +294,10 @@ namespace Vertx
 			// and while it's being shown the actual texture object might disappear --
 			// make sure to handle null targets.
 			Texture tex = target as Texture;
+
+			if (tex == null)
+				return;
+			
 			bool showMode = true;
 			bool alphaOnly = false;
 			bool hasAlpha = true;
@@ -309,6 +336,32 @@ namespace Vertx
 				mipCount = Mathf.Max(mipCount, GetMipmapCount(t));
 			}
 
+			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
+			{
+				//Switch between the default % zoom, and 100% zoom
+				float p100 = 1 / zoomLevel;
+				if (Math.Abs(zoomMultiplier - p100) > 0.001f)
+				{
+					
+					int texWidth = Mathf.Max(tex.width, 1);
+					int texHeight = Mathf.Max(tex.height, 1);
+					Vector2 posNormalized = m_Pos / new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
+					//Zooms to 100
+					zoomMultiplier = p100;
+					
+					//Focuses Center
+					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
+					m_Pos = newPos;
+				}
+				else
+				{
+					//Zooms to default
+					zoomMultiplier = 1;
+					m_Pos = Vector2.zero;
+				}
+				Repaint();
+			}
+			
 			if (alphaOnly)
 			{
 				m_ShowAlpha = true;
