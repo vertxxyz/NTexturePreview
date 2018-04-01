@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace Vertx
 {
@@ -163,7 +164,9 @@ namespace Vertx
 				else if (t2d != null && t2d.alphaIsTransparency)
 					EditorGUI.DrawTextureTransparent(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
 				else
-					EditorGUI.DrawPreviewTexture(wantedRect, t, null, ScaleMode.StretchToFill, 0, mipLevel);
+				{
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0, mipLevel);
+				}
 
 				// TODO: Less hacky way to prevent sprite rects to not appear in smaller previews like icons.
 				if (wantedRect.width > 32 && wantedRect.height > 32)
@@ -336,6 +339,13 @@ namespace Vertx
 				mipCount = Mathf.Max(mipCount, GetMipmapCount(t));
 			}
 
+			if (GUILayout.Button("PreviewColor2D.shader"))
+			{
+				
+				Shader previewShader = (Shader)EditorGUIUtility.LoadRequired("Previews/PreviewColor2D.shader");
+				Selection.activeObject = previewShader;
+			}
+
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
 			{
 				//Switch between the default % zoom, and 100% zoom
@@ -361,7 +371,35 @@ namespace Vertx
 				}
 				Repaint();
 			}
-			
+
+			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+			{
+				m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
+				if (changeCheckScope.changed)
+				{
+					rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
+					Repaint();
+				}
+			}
+			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+			{
+				m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
+				if (changeCheckScope.changed)
+				{
+					rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
+					Repaint();
+				}
+			}
+			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+			{
+				m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
+				if (changeCheckScope.changed)
+				{
+					rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
+					Repaint();
+				}
+			}
+
 			if (alphaOnly)
 			{
 				m_ShowAlpha = true;
@@ -494,6 +532,15 @@ namespace Vertx
 			m_GUICalculateScaledTextureRects.Invoke(null, results);
 			outScreenRect = (Rect) results[3];
 			outSourceRect = (Rect) results[4];
+		}
+
+		private static MethodInfo m_DrawPreviewTextureInternal;
+		private static void DrawPreviewTexture (Rect position, Texture image, Material mat, ScaleMode scaleMode, float imageAspect, float mipLevel)
+		{
+			if(m_DrawPreviewTextureInternal == null)
+				m_DrawPreviewTextureInternal = typeof(EditorGUI).GetMethod("DrawPreviewTextureInternal", BindingFlags.NonPublic | BindingFlags.Static, null,
+					new[]{typeof(Rect), typeof(Texture), typeof(Material), typeof(ScaleMode), typeof(float), typeof(float)}, null);
+			m_DrawPreviewTextureInternal.Invoke(null, new object[] {position, image, mat, scaleMode, imageAspect, mipLevel});
 		}
 	}
 }

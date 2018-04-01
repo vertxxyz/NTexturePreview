@@ -25,11 +25,25 @@ namespace Vertx
 			BakedLightmapFullHDR = 8,
 			RealtimeLightmapRGBM = 9,
 		}
+
+		private static Material _rGBAMaterial;
+		protected static Material rGBAMaterial
+		{
+			get
+			{
+				if (_rGBAMaterial == null)
+					_rGBAMaterial = Resources.Load<Material>("RGBAMaterial");
+				return _rGBAMaterial;
+			}
+		}
+
+		public bool m_R = true, m_G = true, m_B = true, m_A = true;
 		
 		protected class Styles
 		{
 			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
 			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel;
+			public readonly GUIStyle previewButton_R, previewButton_G, previewButton_B;
 
 			public readonly GUIContent wrapModeLabel = TrTextContent("Wrap Mode");
 			public readonly GUIContent wrapU = TrTextContent("U axis");
@@ -68,6 +82,14 @@ namespace Vertx
 					// UpperCenter centers the mip icons vertically better than MiddleCenter
 					alignment = TextAnchor.UpperCenter
 				};
+				previewButton_R = new GUIStyle(previewButton)
+				{
+					padding =  new RectOffset(5,5,0,0),
+					alignment = TextAnchor.MiddleCenter,
+					normal = {textColor = new Color(1f, 0.28f, 0.33f)}
+				};
+				previewButton_G = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0.45f, 1f, 0.28f)}};
+				previewButton_B = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0f, 0.65f, 1f)}};
 			}
 
 			private static MethodInfo _TrTextContent;
