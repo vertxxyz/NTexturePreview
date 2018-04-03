@@ -17,8 +17,11 @@
 	{
 		Tags { "ForceSupported"="true" }
 
-        Ztest LEqual
-        Zwrite Off
+        Lighting Off
+        Ztest Always
+        Cull Off
+        Zwrite True
+        Fog { Mode Off }
 
 		Pass
 		{
@@ -64,4 +67,5 @@
 			ENDCG
 		}
 	}
+	Fallback off
 }

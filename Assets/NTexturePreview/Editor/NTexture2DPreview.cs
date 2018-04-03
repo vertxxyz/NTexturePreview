@@ -4,7 +4,6 @@ using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Object = UnityEngine.Object;
 
 namespace Vertx
 {
@@ -165,7 +164,12 @@ namespace Vertx
 					EditorGUI.DrawTextureTransparent(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
 				else
 				{
-					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0, mipLevel);
+					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+					RenderTexture rTActive = RenderTexture.active;
+					Graphics.Blit(t, renderTexture, rGBAMaterial);
+					RenderTexture.active = rTActive;
+					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel);//
+					RenderTexture.ReleaseTemporary(renderTexture);
 				}
 
 				// TODO: Less hacky way to prevent sprite rects to not appear in smaller previews like icons.
@@ -339,12 +343,12 @@ namespace Vertx
 				mipCount = Mathf.Max(mipCount, GetMipmapCount(t));
 			}
 
-			if (GUILayout.Button("PreviewColor2D.shader"))
-			{
-				
-				Shader previewShader = (Shader)EditorGUIUtility.LoadRequired("Previews/PreviewColor2D.shader");
-				Selection.activeObject = previewShader;
-			}
+//			if (GUILayout.Button("PreviewColor2D.shader"))
+//			{
+//				
+//				Shader previewShader = (Shader)EditorGUIUtility.LoadRequired("Previews/PreviewColor2D.shader");
+//				Selection.activeObject = previewShader;
+//			}
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
 			{
@@ -534,13 +538,13 @@ namespace Vertx
 			outSourceRect = (Rect) results[4];
 		}
 
-		private static MethodInfo m_DrawPreviewTextureInternal;
+		/*private static MethodInfo m_DrawPreviewTextureInternal;
 		private static void DrawPreviewTexture (Rect position, Texture image, Material mat, ScaleMode scaleMode, float imageAspect, float mipLevel)
 		{
 			if(m_DrawPreviewTextureInternal == null)
 				m_DrawPreviewTextureInternal = typeof(EditorGUI).GetMethod("DrawPreviewTextureInternal", BindingFlags.NonPublic | BindingFlags.Static, null,
 					new[]{typeof(Rect), typeof(Texture), typeof(Material), typeof(ScaleMode), typeof(float), typeof(float)}, null);
 			m_DrawPreviewTextureInternal.Invoke(null, new object[] {position, image, mat, scaleMode, imageAspect, mipLevel});
-		}
+		}*/
 	}
 }
