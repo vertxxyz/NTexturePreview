@@ -161,10 +161,19 @@ namespace Vertx
 				if (m_ShowAlpha)
 					EditorGUI.DrawTextureAlpha(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
 				else if (t2d != null && t2d.alphaIsTransparency)
-					EditorGUI.DrawTextureTransparent(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
+				{
+					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+					renderTexture.filterMode = t.filterMode;
+					RenderTexture rTActive = RenderTexture.active;
+					Graphics.Blit(t, renderTexture, rGBATransparentMaterial);
+					RenderTexture.active = rTActive;
+					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0, mipLevel);
+					RenderTexture.ReleaseTemporary(renderTexture);
+				}
 				else
 				{
-					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+					renderTexture.filterMode = t.filterMode;
 					RenderTexture rTActive = RenderTexture.active;
 					Graphics.Blit(t, renderTexture, rGBAMaterial);
 					RenderTexture.active = rTActive;
@@ -382,6 +391,7 @@ namespace Vertx
 				if (changeCheckScope.changed)
 				{
 					rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
+					rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
 					Repaint();
 				}
 			}
@@ -391,6 +401,7 @@ namespace Vertx
 				if (changeCheckScope.changed)
 				{
 					rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
+					rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
 					Repaint();
 				}
 			}
@@ -400,6 +411,7 @@ namespace Vertx
 				if (changeCheckScope.changed)
 				{
 					rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
+					rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
 					Repaint();
 				}
 			}
@@ -422,7 +434,16 @@ namespace Vertx
 			{
 				GUILayout.Box(s_Styles.smallZoom, s_Styles.previewLabel);
 				GUI.changed = false;
-				m_MipLevel = Mathf.Round(GUILayout.HorizontalSlider(m_MipLevel, mipCount - 1, 0, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.MaxWidth(64)));
+				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+				{
+					m_MipLevel = Mathf.Round(GUILayout.HorizontalSlider(m_MipLevel, mipCount - 1, 0, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.MaxWidth(64)));
+					if (changeCheckScope.changed)
+					{
+						rGBAMaterial.SetFloat("_Mip", m_MipLevel);
+						rGBATransparentMaterial.SetFloat("_Mip", m_MipLevel);
+						Repaint();
+					}
+				}
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
 			}
 		}

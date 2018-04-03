@@ -36,6 +36,17 @@ namespace Vertx
 				return _rGBAMaterial;
 			}
 		}
+		
+		private static Material _rGBATransparentMaterial;
+		protected static Material rGBATransparentMaterial
+		{
+			get
+			{
+				if (_rGBATransparentMaterial == null)
+					_rGBATransparentMaterial = Resources.Load<Material>("RGBATransparentMaterial");
+				return _rGBATransparentMaterial;
+			}
+		}
 
 		public bool m_R = true, m_G = true, m_B = true, m_A = true;
 		
