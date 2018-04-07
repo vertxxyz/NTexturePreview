@@ -8,8 +8,6 @@ namespace Vertx
 	[CustomEditor(typeof(RenderTexture), true), CanEditMultipleObjects]
 	public class NRenderTexturePreview : NTexturePreview
 	{
-		Editor defaultEditor;
-
 		void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector

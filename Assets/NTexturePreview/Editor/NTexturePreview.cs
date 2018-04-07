@@ -10,7 +10,7 @@ namespace Vertx
 	[CustomEditor(typeof(Texture2D), true), CanEditMultipleObjects]
 	public class NTexturePreview : NTexturePreviewBase
 	{
-		Editor defaultEditor;
+		protected Editor defaultEditor;
 
 		void OnEnable()
 		{
@@ -409,6 +409,7 @@ namespace Vertx
 
 			if (!alphaOnly)
 			{
+				bool allOff = true;
 				if (hasR)
 				{
 					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
@@ -416,11 +417,18 @@ namespace Vertx
 						m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
 						if (changeCheckScope.changed)
 						{
-							rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
-							rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
+							if (!Event.current.control)
+							{
+								rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
+								rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
+							} else
+								SetRGBTo(true, false, false);
 							Repaint();
 						}
 					}
+
+					if (m_R)
+						allOff = false;
 				}
 
 				if (hasG)
@@ -430,11 +438,17 @@ namespace Vertx
 						m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
 						if (changeCheckScope.changed)
 						{
-							rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
-							rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
+							if (!Event.current.control)
+							{
+								rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
+								rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
+							} else
+								SetRGBTo(false, true, false);
 							Repaint();
 						}
 					}
+					if (m_G)
+						allOff = false;
 				}
 
 				if (hasB)
@@ -444,11 +458,23 @@ namespace Vertx
 						m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
 						if (changeCheckScope.changed)
 						{
-							rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
-							rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
+							if (!Event.current.control)
+							{
+								rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
+								rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
+							} else
+								SetRGBTo(false, false, true);
 							Repaint();
 						}
 					}
+					if (m_B)
+						allOff = false;
+				}
+
+				if (allOff)
+				{
+					SetRGBTo(true, true, true);
+					Repaint();
 				}
 			}
 
@@ -483,6 +509,19 @@ namespace Vertx
 
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
 			}
+		}
+
+		private void SetRGBTo(bool R, bool G, bool B)
+		{
+			m_R = R;
+			rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
+			rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
+			m_G = G;
+			rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
+			rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
+			m_B = B;
+			rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
+			rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
 		}
 
 		private static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
