@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,32 +26,103 @@ namespace Vertx
 			BakedLightmapFullHDR = 8,
 			RealtimeLightmapRGBM = 9,
 		}
+		protected Editor defaultEditor;
+		private bool m_R = true, m_G = true, m_B = true;
 
-		private static Material _rGBAMaterial;
-
-		protected static Material rGBAMaterial
+		private void SetRGBTo(bool R, bool G, bool B)
 		{
-			get
-			{
-				if (_rGBAMaterial == null)
-					_rGBAMaterial = Resources.Load<Material>("RGBAMaterial");
-				return _rGBAMaterial;
-			}
+			m_R = R;
+			if(rCallback != null)
+				rCallback.Invoke(m_R);
+			
+			m_G = G;
+			if(gCallback != null)
+				gCallback.Invoke(m_G);
+			m_B = B;
+			if(bCallback != null)
+				bCallback.Invoke(m_B);
 		}
 
-		private static Material _rGBATransparentMaterial;
+		protected Action<bool> rCallback;
+		protected Action<bool> gCallback;
+		protected Action<bool> bCallback;
 
-		protected static Material rGBATransparentMaterial
+		/// <summary>
+		/// Use the r, g, and b Callbacks to recieve feedback from this function.
+		/// </summary>
+		/// <param name="hasR">Show the R toggle?</param>
+		/// <param name="hasG">Show the G toggle?</param>
+		/// <param name="hasB">Show the B toggle?</param>
+		protected void DrawRGBToggles(bool hasR, bool hasG, bool hasB)
 		{
-			get
+			bool allOff = true;
+			if (hasR)
 			{
-				if (_rGBATransparentMaterial == null)
-					_rGBATransparentMaterial = Resources.Load<Material>("RGBATransparentMaterial");
-				return _rGBATransparentMaterial;
+				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+				{
+					m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
+					if (changeCheckScope.changed)
+					{
+						if (!Event.current.control)
+						{
+							if(rCallback != null)
+								rCallback.Invoke(m_R);
+						} else
+							SetRGBTo(true, false, false);
+						Repaint();
+					}
+				}
+
+				if (m_R)
+					allOff = false;
+			}
+
+			if (hasG)
+			{
+				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+				{
+					m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
+					if (changeCheckScope.changed)
+					{
+						if (!Event.current.control)
+						{
+							if(gCallback != null)
+								gCallback.Invoke(m_G);
+						} else
+							SetRGBTo(false, true, false);
+						Repaint();
+					}
+				}
+				if (m_G)
+					allOff = false;
+			}
+
+			if (hasB)
+			{
+				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+				{
+					m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
+					if (changeCheckScope.changed)
+					{
+						if (!Event.current.control)
+						{
+							if(bCallback != null)
+								bCallback.Invoke(m_B);
+						} else
+							SetRGBTo(false, false, true);
+						Repaint();
+					}
+				}
+				if (m_B)
+					allOff = false;
+			}
+
+			if (allOff)
+			{
+				SetRGBTo(true, true, true);
+				Repaint();
 			}
 		}
-
-		public bool m_R = true, m_G = true, m_B = true, m_A = true;
 
 		protected class Styles
 		{
@@ -116,7 +188,12 @@ namespace Vertx
 			}
 		}
 
-		protected static Styles s_Styles;
+		private static Styles _s_Styles;
+
+		protected static Styles s_Styles
+		{
+			get { return _s_Styles ?? (_s_Styles = new Styles()); }
+		}
 
 		protected static void DrawRect(Rect rect)
 		{

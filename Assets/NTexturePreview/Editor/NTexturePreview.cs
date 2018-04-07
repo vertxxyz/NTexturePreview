@@ -10,12 +10,11 @@ namespace Vertx
 	[CustomEditor(typeof(Texture2D), true), CanEditMultipleObjects]
 	public class NTexturePreview : NTexturePreviewBase
 	{
-		protected Editor defaultEditor;
-
-		void OnEnable()
+		protected void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
-			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
+			if(defaultEditor == null)
+				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
 			animatedPos = new AnimVector3(Vector3.zero, () =>
 			{
 				m_Pos = animatedPos.value;
@@ -24,11 +23,47 @@ namespace Vertx
 			{
 				speed = 1.5f
 			};
+			rCallback = r => {
+				rGBAMaterial.SetFloat("_R", r ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_R", r ? 1 : 0);
+			};
+			gCallback = g => {
+				rGBAMaterial.SetFloat("_G", g ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_G", g ? 1 : 0);
+			};
+			bCallback = b => {
+				rGBAMaterial.SetFloat("_B", b ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_B", b ? 1 : 0);
+			};
 		}
 
 		[SerializeField] float m_MipLevel;
 
 		[SerializeField] protected Vector2 m_Pos;
+		
+		private static Material _rGBAMaterial;
+
+		protected static Material rGBAMaterial
+		{
+			get
+			{
+				if (_rGBAMaterial == null)
+					_rGBAMaterial = Resources.Load<Material>("RGBAMaterial");
+				return _rGBAMaterial;
+			}
+		}
+
+		private static Material _rGBATransparentMaterial;
+
+		protected static Material rGBATransparentMaterial
+		{
+			get
+			{
+				if (_rGBATransparentMaterial == null)
+					_rGBATransparentMaterial = Resources.Load<Material>("RGBATransparentMaterial");
+				return _rGBATransparentMaterial;
+			}
+		}
 
 		void OnDisable()
 		{
@@ -307,11 +342,6 @@ namespace Vertx
 				return;
 			}
 
-
-			if (s_Styles == null)
-				s_Styles = new Styles();
-
-
 			// TextureInspector code is reused for RenderTexture and Cubemap inspectors.
 			// Make sure we can handle the situation where target is just a Texture and
 			// not a Texture2D. It's also used for large popups for mini texture fields,
@@ -333,7 +363,7 @@ namespace Vertx
 				hasAlpha = false;
 			}
 
-			bool hasR = true, hasG = true, hasB = true;
+			bool hasR = false, hasG = false, hasB = false;
 
 			foreach (Texture t in targets)
 			{
@@ -358,8 +388,11 @@ namespace Vertx
 						if (mode == TextureUsageMode.Default) // all other texture usage modes don't displayable alpha
 							hasAlpha = true;
 					}
-
-					CheckRGBFormats(format, out hasR, out hasG, out hasB);
+					bool _hasR, _hasG, _hasB;
+					CheckRGBFormats(format, out _hasR, out _hasG, out _hasB);
+					hasR = hasR || _hasR;
+					hasG = hasG || _hasG;
+					hasB = hasB || _hasB;
 				}
 
 				mipCount = Mathf.Max(mipCount, GetMipmapCount(t));
@@ -369,7 +402,18 @@ namespace Vertx
 					if (t is RenderTexture)
 					{
 						RenderTextureFormat renderTextureFormat = (t as RenderTexture).format;
-						CheckRGBFormats(renderTextureFormat, out hasR, out hasG, out hasB);
+						bool _hasR, _hasG, _hasB;
+						CheckRGBFormats(renderTextureFormat, out _hasR, out _hasG, out _hasB);
+						hasR = hasR || _hasR;
+						hasG = hasG || _hasG;
+						hasB = hasB || _hasB;
+					}
+					else
+					{
+						//If we cannot validate whether the texture has RGB, lets assume it does by default.
+						hasR = true;
+						hasG = true;
+						hasB = true;
 					}
 				}
 			}
@@ -408,75 +452,7 @@ namespace Vertx
 			}
 
 			if (!alphaOnly)
-			{
-				bool allOff = true;
-				if (hasR)
-				{
-					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-					{
-						m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
-						if (changeCheckScope.changed)
-						{
-							if (!Event.current.control)
-							{
-								rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
-								rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
-							} else
-								SetRGBTo(true, false, false);
-							Repaint();
-						}
-					}
-
-					if (m_R)
-						allOff = false;
-				}
-
-				if (hasG)
-				{
-					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-					{
-						m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
-						if (changeCheckScope.changed)
-						{
-							if (!Event.current.control)
-							{
-								rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
-								rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
-							} else
-								SetRGBTo(false, true, false);
-							Repaint();
-						}
-					}
-					if (m_G)
-						allOff = false;
-				}
-
-				if (hasB)
-				{
-					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-					{
-						m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
-						if (changeCheckScope.changed)
-						{
-							if (!Event.current.control)
-							{
-								rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
-								rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
-							} else
-								SetRGBTo(false, false, true);
-							Repaint();
-						}
-					}
-					if (m_B)
-						allOff = false;
-				}
-
-				if (allOff)
-				{
-					SetRGBTo(true, true, true);
-					Repaint();
-				}
-			}
+				DrawRGBToggles(hasR, hasG, hasB);
 
 			if (alphaOnly)
 			{
@@ -509,19 +485,6 @@ namespace Vertx
 
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
 			}
-		}
-
-		private void SetRGBTo(bool R, bool G, bool B)
-		{
-			m_R = R;
-			rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
-			rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
-			m_G = G;
-			rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
-			rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
-			m_B = B;
-			rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
-			rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
 		}
 
 		private static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
