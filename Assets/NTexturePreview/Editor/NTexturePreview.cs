@@ -10,12 +10,11 @@ namespace Vertx
 	[CustomEditor(typeof(Texture2D), true), CanEditMultipleObjects]
 	public class NTexturePreview : NTexturePreviewBase
 	{
-		Editor defaultEditor;
-
-		void OnEnable()
+		protected void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
-			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
+			if(defaultEditor == null)
+				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
 			animatedPos = new AnimVector3(Vector3.zero, () =>
 			{
 				m_Pos = animatedPos.value;
@@ -24,11 +23,47 @@ namespace Vertx
 			{
 				speed = 1.5f
 			};
+			rCallback = r => {
+				rGBAMaterial.SetFloat("_R", r ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_R", r ? 1 : 0);
+			};
+			gCallback = g => {
+				rGBAMaterial.SetFloat("_G", g ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_G", g ? 1 : 0);
+			};
+			bCallback = b => {
+				rGBAMaterial.SetFloat("_B", b ? 1 : 0);
+				rGBATransparentMaterial.SetFloat("_B", b ? 1 : 0);
+			};
 		}
 
 		[SerializeField] float m_MipLevel;
 
 		[SerializeField] protected Vector2 m_Pos;
+		
+		private static Material _rGBAMaterial;
+
+		protected static Material rGBAMaterial
+		{
+			get
+			{
+				if (_rGBAMaterial == null)
+					_rGBAMaterial = Resources.Load<Material>("RGBMaterial");
+				return _rGBAMaterial;
+			}
+		}
+
+		private static Material _rGBATransparentMaterial;
+
+		protected static Material rGBATransparentMaterial
+		{
+			get
+			{
+				if (_rGBATransparentMaterial == null)
+					_rGBATransparentMaterial = Resources.Load<Material>("RGBAMaterial");
+				return _rGBATransparentMaterial;
+			}
+		}
 
 		void OnDisable()
 		{
@@ -53,7 +88,9 @@ namespace Vertx
 		private float zoomLevel;
 		private float zoomMultiplier = 1;
 		private const float maxZoomNormalized = 3;
+
 		private bool hasDragged;
+
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
 
@@ -72,7 +109,7 @@ namespace Vertx
 			PreviewTexture(r, t, background, e);
 		}
 
-		protected void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
+		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			// Render target must be created before we can display it (case 491797)
 			RenderTexture rt = t as RenderTexture;
@@ -95,7 +132,7 @@ namespace Vertx
 				//There seems to be some unhelpful layout and repaint steps that provide rect scales that are unhelpful...
 				return;
 			}
-			
+
 			// target can report zero sizes in some cases just after a parameter change;
 			// guard against that.
 			int texWidth = Mathf.Max(t.width, 1);
@@ -150,6 +187,7 @@ namespace Vertx
 					m_Pos = newPos;
 					m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
 				}
+
 				e.Use();
 				Repaint();
 			}
@@ -182,7 +220,7 @@ namespace Vertx
 					RenderTexture rTActive = RenderTexture.active;
 					Graphics.Blit(t, renderTexture, rGBAMaterial);
 					RenderTexture.active = rTActive;
-					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel);//
+					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel); //
 					RenderTexture.ReleaseTemporary(renderTexture);
 				}
 
@@ -237,9 +275,8 @@ namespace Vertx
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
 		}
 
-		private Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
+		private static Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
 		{
-			
 			Vector2 rectCenter = new Vector2(r.width / 2f, r.height / 2f);
 			Vector2 localPos = new Vector2(position.x - r.x, position.y - r.y);
 			localPos -= rectCenter;
@@ -247,15 +284,16 @@ namespace Vertx
 		}
 
 		private const float smallestOnScreenNormalisedRect = 0.5f;
+
 		private Vector2 ClampPos(Vector2 m_PosLocal, Rect r, float textureWidth, float textureHeight, float zoomLevel)
 		{
 			float w2 = textureWidth * zoomLevel * zoomMultiplier;
 			float h2 = textureHeight * zoomLevel * zoomMultiplier;
-			
+
 			w2 /= 2;
 			h2 /= 2;
-			w2 += r.width/2f - smallestOnScreenNormalisedRect*r.width;
-			h2 += r.height/2f - smallestOnScreenNormalisedRect*r.height;
+			w2 += r.width / 2f - smallestOnScreenNormalisedRect * r.width;
+			h2 += r.height / 2f - smallestOnScreenNormalisedRect * r.height;
 			return new Vector2(Mathf.Clamp(m_PosLocal.x, -w2, w2), Mathf.Clamp(m_PosLocal.y, -h2, h2));
 		}
 
@@ -304,11 +342,6 @@ namespace Vertx
 				return;
 			}
 
-
-			if (s_Styles == null)
-				s_Styles = new Styles();
-
-
 			// TextureInspector code is reused for RenderTexture and Cubemap inspectors.
 			// Make sure we can handle the situation where target is just a Texture and
 			// not a Texture2D. It's also used for large popups for mini texture fields,
@@ -318,7 +351,7 @@ namespace Vertx
 
 			if (tex == null)
 				return;
-			
+
 			bool showMode = true;
 			bool alphaOnly = false;
 			bool hasAlpha = true;
@@ -330,10 +363,14 @@ namespace Vertx
 				hasAlpha = false;
 			}
 
+			bool hasR = false, hasG = false, hasB = false;
+
+			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
 			foreach (Texture t in targets)
 			{
 				if (t == null) // texture might have disappeared while we're showing this in a preview popup
 					continue;
+
 				TextureFormat format = 0;
 				bool checkFormat = false;
 				if (t is Texture2D)
@@ -352,9 +389,34 @@ namespace Vertx
 						if (mode == TextureUsageMode.Default) // all other texture usage modes don't displayable alpha
 							hasAlpha = true;
 					}
+					bool _hasR, _hasG, _hasB;
+					CheckRGBFormats(format, out _hasR, out _hasG, out _hasB);
+					hasR = hasR || _hasR;
+					hasG = hasG || _hasG;
+					hasB = hasB || _hasB;
 				}
 
 				mipCount = Mathf.Max(mipCount, GetMipmapCount(t));
+
+				if (!checkFormat)
+				{
+					if (t is RenderTexture)
+					{
+						RenderTextureFormat renderTextureFormat = (t as RenderTexture).format;
+						bool _hasR, _hasG, _hasB;
+						CheckRGBFormats(renderTextureFormat, out _hasR, out _hasG, out _hasB);
+						hasR = hasR || _hasR;
+						hasG = hasG || _hasG;
+						hasB = hasB || _hasB;
+					}
+					else
+					{
+						//If we cannot validate whether the texture has RGB, lets assume it does by default.
+						hasR = true;
+						hasG = true;
+						hasB = true;
+					}
+				}
 			}
 
 //			if (GUILayout.Button("PreviewColor2D.shader"))
@@ -370,13 +432,12 @@ namespace Vertx
 				float p100 = 1 / zoomLevel;
 				if (Math.Abs(zoomMultiplier - p100) > 0.001f)
 				{
-					
 					int texWidth = Mathf.Max(tex.width, 1);
 					int texHeight = Mathf.Max(tex.height, 1);
 					Vector2 posNormalized = m_Pos / new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
 					//Zooms to 100
 					zoomMultiplier = p100;
-					
+
 					//Focuses Center
 					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
 					m_Pos = newPos;
@@ -387,39 +448,12 @@ namespace Vertx
 					zoomMultiplier = 1;
 					m_Pos = Vector2.zero;
 				}
+
 				Repaint();
 			}
 
-			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-			{
-				m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
-				if (changeCheckScope.changed)
-				{
-					rGBAMaterial.SetFloat("_R", m_R ? 1 : 0);
-					rGBATransparentMaterial.SetFloat("_R", m_R ? 1 : 0);
-					Repaint();
-				}
-			}
-			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-			{
-				m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
-				if (changeCheckScope.changed)
-				{
-					rGBAMaterial.SetFloat("_G", m_G ? 1 : 0);
-					rGBATransparentMaterial.SetFloat("_G", m_G ? 1 : 0);
-					Repaint();
-				}
-			}
-			using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
-			{
-				m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
-				if (changeCheckScope.changed)
-				{
-					rGBAMaterial.SetFloat("_B", m_B ? 1 : 0);
-					rGBATransparentMaterial.SetFloat("_B", m_B ? 1 : 0);
-					Repaint();
-				}
-			}
+			if (!alphaOnly)
+				DrawRGBToggles(hasR, hasG, hasB);
 
 			if (alphaOnly)
 			{
@@ -432,7 +466,7 @@ namespace Vertx
 				showMode = false;
 			}
 
-			if (showMode && tex != null && !IsNormalMap(tex))
+			if (showMode && !IsNormalMap(tex))
 				m_ShowAlpha = GUILayout.Toggle(m_ShowAlpha, m_ShowAlpha ? s_Styles.alphaIcon : s_Styles.RGBIcon, s_Styles.previewButton);
 
 			if (mipCount > 1)
@@ -449,7 +483,72 @@ namespace Vertx
 						Repaint();
 					}
 				}
+
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
+			}
+		}
+
+		public static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
+		{
+			hasR = true;
+			hasG = true;
+			hasB = true;
+			// ReSharper disable once SwitchStatementMissingSomeCases
+			switch (textureFormat)
+			{
+				case TextureFormat.Alpha8:
+					hasR = false;
+					hasG = false;
+					hasB = false;
+					break;
+				case TextureFormat.RGHalf:
+				case TextureFormat.RGFloat:
+				case TextureFormat.BC5:
+				case TextureFormat.EAC_RG:
+				case TextureFormat.EAC_RG_SIGNED:
+				case TextureFormat.RG16:
+					hasB = false;
+					break;
+				case TextureFormat.R16:
+				case TextureFormat.RHalf:
+				case TextureFormat.RFloat:
+				case TextureFormat.BC4:
+				case TextureFormat.EAC_R:
+				case TextureFormat.EAC_R_SIGNED:
+				case TextureFormat.R8:
+					hasB = false;
+					hasG = false;
+					break;
+			}
+		}
+
+		private static void CheckRGBFormats(RenderTextureFormat renderTextureFormat, out bool hasR, out bool hasG, out bool hasB)
+		{
+			hasR = true;
+			hasG = true;
+			hasB = true;
+			// ReSharper disable once SwitchStatementMissingSomeCases
+			switch (renderTextureFormat)
+			{
+				case RenderTextureFormat.Depth:
+					hasR = false;
+					hasG = false;
+					hasB = false;
+					break;
+				case RenderTextureFormat.RG16:
+				case RenderTextureFormat.RG32:
+				case RenderTextureFormat.RGInt:
+				case RenderTextureFormat.RGHalf:
+				case RenderTextureFormat.RGFloat:
+					hasB = false;
+					break;
+				case RenderTextureFormat.RInt:
+				case RenderTextureFormat.R8:
+				case RenderTextureFormat.RHalf:
+				case RenderTextureFormat.RFloat:
+					hasG = false;
+					hasB = false;
+					break;
 			}
 		}
 

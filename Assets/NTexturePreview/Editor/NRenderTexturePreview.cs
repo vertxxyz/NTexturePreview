@@ -1,22 +1,20 @@
 ﻿using System;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.AnimatedValues;
 using UnityEngine;
 
 namespace Vertx
 {
 	[CustomEditor(typeof(RenderTexture), true), CanEditMultipleObjects]
-	public class NRenderTexturePreview : NTexturePreview {
-
-		Editor defaultEditor;
-
-		void OnEnable()
+	public class NRenderTexturePreview : NTexturePreview
+	{
+		new void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
 			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.RenderTextureEditor, UnityEditor"));
+			base.OnEnable();
 		}
-		
+
 		void OnDisable()
 		{
 			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.

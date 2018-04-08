@@ -22,6 +22,7 @@
         Cull Off
         Zwrite True
         Fog { Mode Off }
+        Blend SrcAlpha OneMinusSrcAlpha
 
 		Pass
 		{
@@ -60,7 +61,7 @@
 			
 			float4 frag (v2f i) : SV_Target
 			{
-				float4 col = tex2Dlod(_MainTex, float4(i.uv,0,_Mip));
+				float4 col = tex2Dlod(_MainTex, float4(i.uv, 0, _Mip));
 				col = float4(col.r*_R, col.g*_G, col.b*_B, col.a*_A);
 				return col;
 			}
