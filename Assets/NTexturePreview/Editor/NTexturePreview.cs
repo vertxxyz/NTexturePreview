@@ -48,7 +48,7 @@ namespace Vertx
 			get
 			{
 				if (_rGBAMaterial == null)
-					_rGBAMaterial = Resources.Load<Material>("RGBAMaterial");
+					_rGBAMaterial = Resources.Load<Material>("RGBMaterial");
 				return _rGBAMaterial;
 			}
 		}
@@ -60,7 +60,7 @@ namespace Vertx
 			get
 			{
 				if (_rGBATransparentMaterial == null)
-					_rGBATransparentMaterial = Resources.Load<Material>("RGBATransparentMaterial");
+					_rGBATransparentMaterial = Resources.Load<Material>("RGBAMaterial");
 				return _rGBATransparentMaterial;
 			}
 		}
@@ -365,6 +365,7 @@ namespace Vertx
 
 			bool hasR = false, hasG = false, hasB = false;
 
+			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
 			foreach (Texture t in targets)
 			{
 				if (t == null) // texture might have disappeared while we're showing this in a preview popup
@@ -487,7 +488,7 @@ namespace Vertx
 			}
 		}
 
-		private static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
+		public static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
 		{
 			hasR = true;
 			hasG = true;

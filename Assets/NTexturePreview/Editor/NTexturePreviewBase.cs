@@ -124,6 +124,11 @@ namespace Vertx
 			}
 		}
 
+		public override string GetInfoString()
+		{
+			return defaultEditor.GetInfoString();
+		}
+
 		protected class Styles
 		{
 			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
