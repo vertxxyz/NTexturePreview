@@ -87,7 +87,7 @@ namespace Vertx
 
 		private float zoomLevel;
 		private float zoomMultiplier = 1;
-		private const float maxZoomNormalized = 3;
+		private const float maxZoomNormalized = 6;
 
 		private bool hasDragged;
 
