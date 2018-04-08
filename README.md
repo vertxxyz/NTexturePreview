@@ -10,7 +10,6 @@ Enhanced Texture Previewer for Unity
 
 ### 3D Materials
 
-You can override the Material used for the 3D Texture Preview.
-This is done by inheriting from N3DTexturePreview.I3DMaterialOverride.
-An example is provided at NTexturePreview > Editor > N3DTexturePreviewExample.cs
-Uncommenting this file will provide a simple raymarching material to all Texture3D previews.
+You can override the Material used for the 3D Texture Preview. This is done by inheriting from N3DTexturePreview.I3DMaterialOverride.
+
+An example is provided at NTexturePreview > Editor > N3DTexturePreviewExample.cs. Uncommenting this file will provide a simple raymarching material to all Texture3D previews.
