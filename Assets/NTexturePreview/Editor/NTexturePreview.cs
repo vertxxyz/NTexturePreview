@@ -182,7 +182,7 @@ namespace Vertx
 				if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
 				{
 					//Focuses Center
-					Vector2 posNormalized = m_Pos / new Vector2(wantedRect.width, wantedRect.height);
+					Vector2 posNormalized = new Vector2(m_Pos.x / wantedRect.width, m_Pos.y / wantedRect.height);
 					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
 					m_Pos = newPos;
 					m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
@@ -202,7 +202,13 @@ namespace Vertx
 
 				Texture2D t2d = t as Texture2D;
 				if (m_ShowAlpha)
+				{
+					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawTextureAlpha(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
+					#else
+					EditorGUI.DrawTextureAlpha(wantedRect, t, ScaleMode.StretchToFill, 0);
+					#endif
+				}
 				else if (t2d != null && t2d.alphaIsTransparency)
 				{
 					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
@@ -210,7 +216,11 @@ namespace Vertx
 					RenderTexture rTActive = RenderTexture.active;
 					Graphics.Blit(t, renderTexture, rGBATransparentMaterial);
 					RenderTexture.active = rTActive;
+					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0, mipLevel);
+					#else
+					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0);
+					#endif
 					RenderTexture.ReleaseTemporary(renderTexture);
 				}
 				else
@@ -220,7 +230,11 @@ namespace Vertx
 					RenderTexture rTActive = RenderTexture.active;
 					Graphics.Blit(t, renderTexture, rGBAMaterial);
 					RenderTexture.active = rTActive;
-					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel); //
+					#if UNITY_2018_1_OR_NEWER
+					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel);
+					#else
+					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0);
+					#endif
 					RenderTexture.ReleaseTemporary(renderTexture);
 				}
 
@@ -434,7 +448,7 @@ namespace Vertx
 				{
 					int texWidth = Mathf.Max(tex.width, 1);
 					int texHeight = Mathf.Max(tex.height, 1);
-					Vector2 posNormalized = m_Pos / new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
+					Vector2 posNormalized = new Vector2(m_Pos.x / (texWidth * zoomLevel * zoomMultiplier), m_Pos.y / (texHeight * zoomLevel * zoomMultiplier));
 					//Zooms to 100
 					zoomMultiplier = p100;
 

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+#if !UNITY_2018_1_OR_NEWER
+using System.Linq;
+#endif
 
 namespace Vertx
 {
@@ -19,18 +22,24 @@ namespace Vertx
 			/// Return a custom Material for N3DTexturePreview
 			/// </summary>
 			/// <returns>The Material used by the N3DTexturePreview if not null</returns>
-			Material GetMaterial (Texture3D texture3D);
+			Material GetMaterial(Texture3D texture3D);
 		}
-		
+
 		void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
 			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.Texture3DInspector, UnityEditor"));
 
 			//Find all types of I3DMaterialOverride, and query whether there's a valid material for the current target.
-			IEnumerable<Type> i3DMaterialOverrideTypes = (IEnumerable<Type>)Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
-				"GetAllTypesWithInterface", BindingFlags.NonPublic | BindingFlags.Static, null, new[]{typeof(Type)}, null
-				                            ).Invoke(null, new object[]{typeof(I3DMaterialOverride)});
+
+			IEnumerable<Type> i3DMaterialOverrideTypes;
+			#if UNITY_2018_1_OR_NEWER
+			i3DMaterialOverrideTypes = (IEnumerable<Type>) Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
+				"GetAllTypesWithInterface", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(Type)}, null
+			).Invoke(null, new object[] {typeof(I3DMaterialOverride)});
+			#else
+			i3DMaterialOverrideTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(p => p != typeof(I3DMaterialOverride) && typeof(I3DMaterialOverride).IsAssignableFrom(p));
+			#endif
 			foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
 			{
 				I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
@@ -38,16 +47,10 @@ namespace Vertx
 				if (m_Material != null)
 					break;
 			}
-			
-			rCallback = r => {
-				material.SetFloat("_R", r ? 1 : 0);
-			};
-			gCallback = g => {
-				material.SetFloat("_G", g ? 1 : 0);
-			};
-			bCallback = b => {
-				material.SetFloat("_B", b ? 1 : 0);
-			};
+
+			rCallback = r => { material.SetFloat("_R", r ? 1 : 0); };
+			gCallback = g => { material.SetFloat("_G", g ? 1 : 0); };
+			bCallback = b => { material.SetFloat("_B", b ? 1 : 0); };
 		}
 
 		void OnDisable()
@@ -58,7 +61,7 @@ namespace Vertx
 			if (disableMethod != null)
 				disableMethod.Invoke(defaultEditor, null);
 			DestroyImmediate(defaultEditor);
-			
+
 			if (m_PreviewUtility != null)
 			{
 				m_PreviewUtility.Cleanup();
@@ -72,6 +75,7 @@ namespace Vertx
 		}
 
 		private float zoom = 3f;
+
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
@@ -93,12 +97,12 @@ namespace Vertx
 				zoom = 3;
 				Repaint();
 			}
-			
+
 			DrawRGBToggles(hasR, hasB, hasG);
 		}
 
 		public Vector2 m_PreviewDir = new Vector2(0, 0);
-		private PreviewRenderUtility    m_PreviewUtility;
+		private PreviewRenderUtility m_PreviewUtility;
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
@@ -112,7 +116,7 @@ namespace Vertx
 			m_PreviewDir = Drag2D(m_PreviewDir, r);
 
 			Event e = Event.current;
-			
+
 			if (e.type == EventType.ScrollWheel)
 			{
 				zoom = Mathf.Clamp(zoom + e.delta.y * 0.1f, 0.05f, 5f);
@@ -120,10 +124,10 @@ namespace Vertx
 				e.Use();
 				Repaint();
 			}
-			
+
 			if (e.type != EventType.Repaint)
 				return;
-			
+
 			InitPreview();
 			material.mainTexture = target as Texture;
 
@@ -132,7 +136,7 @@ namespace Vertx
 			Unsupported.SetRenderSettingsUseFogNoDirty(false);
 
 			m_PreviewUtility.camera.transform.position = -Vector3.forward * zoom;
-			
+
 			m_PreviewUtility.camera.transform.rotation = Quaternion.identity;
 			Quaternion rot = Quaternion.Euler(m_PreviewDir.y, 0, 0) * Quaternion.Euler(0, m_PreviewDir.x, 0);
 			m_PreviewUtility.DrawMesh(mesh, Vector3.zero, rot, material, 0);
@@ -141,7 +145,7 @@ namespace Vertx
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
 			m_PreviewUtility.EndAndDrawPreview(r);
 		}
-		
+
 		void InitPreview()
 		{
 			if (m_PreviewUtility == null)
@@ -151,20 +155,26 @@ namespace Vertx
 			}
 		}
 
-		private Material material {
-			get {
+		private Material material
+		{
+			get
+			{
 				if (m_Material == null)
 				{
 					m_Material = new Material(EditorGUIUtility.LoadRequired("Previews/Preview3DTextureMaterial.mat") as Material);
 				}
+
 				return m_Material;
 			}
 		}
+
 		private Material m_Material;
-		
+
 		#region PreviewGUI
+
 		//This region contains code taken from the internal PreviewGUI class.
 		private static readonly int sliderHash = "Slider".GetHashCode();
+
 		public static Vector2 Drag2D(Vector2 scrollPosition, Rect position)
 		{
 			int controlId = GUIUtility.GetControlID(sliderHash, FocusType.Passive);
@@ -178,6 +188,7 @@ namespace Vertx
 						current.Use();
 						EditorGUIUtility.SetWantsMouseJumping(1);
 					}
+
 					break;
 				case EventType.MouseUp:
 					if (GUIUtility.hotControl == controlId)
@@ -192,10 +203,13 @@ namespace Vertx
 						current.Use();
 						GUI.changed = true;
 					}
+
 					break;
 			}
+
 			return scrollPosition;
 		}
+
 		#endregion
 
 		private Mesh _mesh;
