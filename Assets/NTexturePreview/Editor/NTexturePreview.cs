@@ -487,7 +487,7 @@ namespace Vertx
 			}
 		}
 
-		private static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
+		public static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
 		{
 			hasR = true;
 			hasG = true;

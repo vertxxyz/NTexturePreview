@@ -32,12 +32,29 @@ namespace Vertx
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
-			DrawRGBToggles(true, true, true);
+			bool hasR = false, hasG = false, hasB = false;
+			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
+			foreach (Texture3D texture3D in targets)
+			{
+				if (texture3D == null) // texture might have disappeared while we're showing this in a preview popup
+					continue;
+				bool _hasR, _hasG, _hasB;
+				NTexturePreview.CheckRGBFormats(texture3D.format, out _hasR, out _hasG, out _hasB);
+				hasR = hasR || _hasR;
+				hasB = hasB || _hasB;
+				hasG = hasG || _hasG;
+			}
+			DrawRGBToggles(hasR, hasB, hasG);
 		}
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
 			defaultEditor.OnPreviewGUI(r, background);
+		}
+		
+		public override void DrawPreview(Rect previewArea)
+		{
+			defaultEditor.DrawPreview(previewArea);
 		}
 
 		public override bool HasPreviewGUI()
