@@ -1,4 +1,4 @@
-﻿Shader "Hidden/RGBATransparentShader"
+﻿Shader "Hidden/RGBShader"
 {
 	Properties
 	{
@@ -9,8 +9,6 @@
         _G ("G", Float) = 1
         [Toggle(B)]
         _B ("B", Float) = 1
-        [Toggle(A)]
-        _A ("A", Float) = 1
         _Mip ("Mip", Float) = 0
 	}
 	SubShader
@@ -22,7 +20,6 @@
         Cull Off
         Zwrite True
         Fog { Mode Off }
-        Blend SrcAlpha OneMinusSrcAlpha
 
 		Pass
 		{
@@ -59,10 +56,10 @@
 				return o;
 			}
 			
-			float4 frag (v2f i) : SV_Target
+			float3 frag (v2f i) : SV_Target
 			{
-				float4 col = tex2Dlod(_MainTex, float4(i.uv, 0, _Mip));
-				col = float4(col.r*_R, col.g*_G, col.b*_B, col.a*_A);
+				float3 col = tex2Dlod(_MainTex, float4(i.uv,0,_Mip)).rgb;
+				col = float3(col.r*_R, col.g*_G, col.b*_B);
 				return col;
 			}
 			ENDCG

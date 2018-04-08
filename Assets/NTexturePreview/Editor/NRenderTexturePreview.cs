@@ -10,9 +10,9 @@ namespace Vertx
 	{
 		new void OnEnable()
 		{
-			base.OnEnable();
 			//When this inspector is created, also create the built-in inspector
 			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.RenderTextureEditor, UnityEditor"));
+			base.OnEnable();
 		}
 
 		void OnDisable()
