@@ -56,11 +56,11 @@
 				return o;
 			}
 			
-			float3 frag (v2f i) : SV_Target
+			float4 frag (v2f i) : SV_Target
 			{
 				float3 col = tex2Dlod(_MainTex, float4(i.uv,0,_Mip)).rgb;
 				col = float3(col.r*_R, col.g*_G, col.b*_B);
-				return col;
+				return float4(col, 1);
 			}
 			ENDCG
 		}
