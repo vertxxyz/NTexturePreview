@@ -35,7 +35,8 @@ Shader "Hidden/RGBA3DShader"
 			
 			
 			#define MAX_STEPS 256.0
-			#define DIST 1.0/MAX_STEPS
+			#define ROOT3 1.73205081
+			#define DIST ROOT3/MAX_STEPS
 
             //origin is the camera position - we need to check whether we're behind the camera because we support zooming!
 			float4 raymarch (float3 position, float3 origin, float3 direction) {
