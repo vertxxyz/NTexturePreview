@@ -155,7 +155,7 @@ namespace Vertx
 			get {
 				if (m_Material == null)
 				{
-					m_Material = EditorGUIUtility.LoadRequired("Previews/Preview3DTextureMaterial.mat") as Material;
+					m_Material = new Material(EditorGUIUtility.LoadRequired("Previews/Preview3DTextureMaterial.mat") as Material);
 				}
 				return m_Material;
 			}

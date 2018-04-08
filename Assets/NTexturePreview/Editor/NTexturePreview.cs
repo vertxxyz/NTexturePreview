@@ -48,7 +48,7 @@ namespace Vertx
 			get
 			{
 				if (_rGBAMaterial == null)
-					_rGBAMaterial = Resources.Load<Material>("RGBMaterial");
+					_rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader"));
 				return _rGBAMaterial;
 			}
 		}
@@ -60,7 +60,7 @@ namespace Vertx
 			get
 			{
 				if (_rGBATransparentMaterial == null)
-					_rGBATransparentMaterial = Resources.Load<Material>("RGBAMaterial");
+					_rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader"));
 				return _rGBATransparentMaterial;
 			}
 		}
@@ -87,7 +87,7 @@ namespace Vertx
 
 		private float zoomLevel;
 		private float zoomMultiplier = 1;
-		private const float maxZoomNormalized = 3;
+		private const float maxZoomNormalized = 6;
 
 		private bool hasDragged;
 
