@@ -211,31 +211,17 @@ namespace Vertx
 				}
 				else if (t2d != null && t2d.alphaIsTransparency)
 				{
-					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-					renderTexture.filterMode = t.filterMode;
-					RenderTexture rTActive = RenderTexture.active;
-					Graphics.Blit(t, renderTexture, rGBATransparentMaterial);
-					RenderTexture.active = rTActive;
-					#if UNITY_2018_1_OR_NEWER
-					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0, mipLevel);
-					#else
-					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0);
-					#endif
-					RenderTexture.ReleaseTemporary(renderTexture);
+					float imageAspect = t.width / (float)t.height;
+					DrawTransparencyCheckerTexture(wantedRect, ScaleMode.StretchToFill, imageAspect);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
 				}
 				else
 				{
-					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-					renderTexture.filterMode = t.filterMode;
-					RenderTexture rTActive = RenderTexture.active;
-					Graphics.Blit(t, renderTexture, rGBAMaterial);
-					RenderTexture.active = rTActive;
 					#if UNITY_2018_1_OR_NEWER
-					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0, mipLevel);
 					#else
-					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0);
 					#endif
-					RenderTexture.ReleaseTemporary(renderTexture);
 				}
 
 				// TODO: Less hacky way to prevent sprite rects to not appear in smaller previews like icons.
@@ -564,6 +550,15 @@ namespace Vertx
 					hasB = false;
 					break;
 			}
+		}
+		
+		private static MethodInfo _DrawTransparencyCheckerTexture;
+
+		private static void DrawTransparencyCheckerTexture(Rect wantedRect, ScaleMode scaleMode, float imageAspect)
+		{
+			if (_DrawTransparencyCheckerTexture == null)
+				_DrawTransparencyCheckerTexture = typeof(EditorGUI).GetMethod("DrawTransparencyCheckerTexture", BindingFlags.NonPublic | BindingFlags.Static);
+			_DrawTransparencyCheckerTexture.Invoke(null, new object[] {wantedRect, scaleMode, imageAspect});
 		}
 
 		private static Type m_TextureUtilType;
