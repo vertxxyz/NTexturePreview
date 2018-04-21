@@ -26,14 +26,17 @@ namespace Vertx
 			rCallback = r => {
 				rGBAMaterial.SetFloat("_R", r ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_R", r ? 1 : 0);
+				normalsMaterial.SetFloat("_R", r ? 1 : 0);
 			};
 			gCallback = g => {
 				rGBAMaterial.SetFloat("_G", g ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_G", g ? 1 : 0);
+				normalsMaterial.SetFloat("_G", g ? 1 : 0);
 			};
 			bCallback = b => {
 				rGBAMaterial.SetFloat("_B", b ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_B", b ? 1 : 0);
+				normalsMaterial.SetFloat("_B", b ? 1 : 0);
 			};
 		}
 
@@ -42,7 +45,6 @@ namespace Vertx
 		[SerializeField] protected Vector2 m_Pos;
 		
 		private static Material _rGBAMaterial;
-
 		protected static Material rGBAMaterial
 		{
 			get
@@ -54,7 +56,6 @@ namespace Vertx
 		}
 
 		private static Material _rGBATransparentMaterial;
-
 		protected static Material rGBATransparentMaterial
 		{
 			get
@@ -62,6 +63,18 @@ namespace Vertx
 				if (_rGBATransparentMaterial == null)
 					_rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader"));
 				return _rGBATransparentMaterial;
+			}
+		}
+		
+		private static Material _normalsMaterial;
+
+		protected static Material normalsMaterial
+		{
+			get
+			{
+				if (_normalsMaterial == null)
+					_normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader"));
+				return _normalsMaterial;
 			}
 		}
 
@@ -217,10 +230,12 @@ namespace Vertx
 				}
 				else
 				{
+					bool isNormalMap = IsNormalMap(t);
+					Material matToUse = isNormalMap ? normalsMaterial : rGBAMaterial;
 					#if UNITY_2018_1_OR_NEWER
-					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0, mipLevel);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0, mipLevel);
 					#else
-					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, 0);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0);
 					#endif
 				}
 

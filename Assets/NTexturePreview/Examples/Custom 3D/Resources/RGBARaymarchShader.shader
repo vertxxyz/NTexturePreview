@@ -1,4 +1,4 @@
-﻿Shader "Hidden/RGBA3DShader"
+﻿Shader "Hidden/RGBARaymarchShader"
 {
 	Properties
 	{
