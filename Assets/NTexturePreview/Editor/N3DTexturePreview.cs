@@ -159,7 +159,7 @@ namespace Vertx
 			Repaint();
 		}
 
-		public Vector2 m_PreviewDir = new Vector2(0, 0);
+		public Vector2 m_PreviewDir = new Vector2(30, -25);
 		private PreviewRenderUtility m_PreviewUtility;
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
