@@ -117,17 +117,20 @@ namespace Vertx
 					{
 						Vector3 size = new Vector3(defaultTex3D.width, defaultTex3D.height, defaultTex3D.depth);
 						Vector3 sizeCurrent = new Vector3(x * (size.x - 1) + 1, y * (size.y - 1) + 1, z * (size.z - 1) + 1);
-						axis = (Axis) EditorGUILayout.EnumPopup(axis, GUILayout.Width(25));
+						axis = (Axis) EditorGUILayout.EnumPopup(axis, s_Styles.previewDropDown, GUILayout.Width(25));
 						switch (axis)
 						{
 							case Axis.X:
-								x = (EditorGUILayout.IntSlider((int) sizeCurrent.x, 1, (int) size.x) - 1) / (size.x - 1);
+								x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.x - 1);
+								EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
 								break;
 							case Axis.Y:
-								y = (EditorGUILayout.IntSlider((int) sizeCurrent.y, 1, (int) size.y) - 1) / (size.y - 1);
+								y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.y - 1);
+								EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
 								break;
 							case Axis.Z:
-								z = (EditorGUILayout.IntSlider((int) sizeCurrent.z, 1, (int) size.z) - 1) / (size.z - 1);
+								z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.z - 1);
+								EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
 								break;
 						}
 

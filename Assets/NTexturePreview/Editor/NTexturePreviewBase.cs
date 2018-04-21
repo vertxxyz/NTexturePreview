@@ -132,7 +132,7 @@ namespace Vertx
 		protected class Styles
 		{
 			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
-			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel;
+			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel, previewDropDown;
 			public readonly GUIStyle previewButton_R, previewButton_G, previewButton_B;
 
 			public readonly GUIContent wrapModeLabel = TrTextContent("Wrap Mode");
@@ -168,6 +168,7 @@ namespace Vertx
 				previewButton = "preButton";
 				previewSlider = "preSlider";
 				previewSliderThumb = "preSliderThumb";
+				previewDropDown = "PreDropDown";
 				previewLabel = new GUIStyle("preLabel")
 				{
 					// UpperCenter centers the mip icons vertically better than MiddleCenter
