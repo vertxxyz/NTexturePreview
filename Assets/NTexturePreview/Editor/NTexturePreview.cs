@@ -122,6 +122,10 @@ namespace Vertx
 			PreviewTexture(r, t, background, e);
 		}
 
+		//Variables for normal map diffuse preview.
+		private bool continuousRepaint;
+		private float lightZ = 0.1f;
+		
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			// Render target must be created before we can display it (case 491797)
@@ -145,6 +149,8 @@ namespace Vertx
 				//There seems to be some unhelpful layout and repaint steps that provide rect scales that are unhelpful...
 				return;
 			}
+			
+			bool isNormalMap = IsNormalMap(t);
 
 			// target can report zero sizes in some cases just after a parameter change;
 			// guard against that.
@@ -158,6 +164,43 @@ namespace Vertx
 			if (e.type == EventType.MouseDown)
 			{
 				hasDragged = false;
+			}
+			
+			if (isNormalMap)
+			{
+				if (e.button == 1)
+				{
+					switch (e.type)
+					{
+						case EventType.MouseDown:
+							normalsMaterial.EnableKeyword("PREVIEW_DIFFUSE");
+							normalsMaterial.DisableKeyword("PREVIEW_NORMAL");
+							continuousRepaint = true;
+							break;
+						case EventType.MouseUp:
+							normalsMaterial.DisableKeyword("PREVIEW_DIFFUSE");
+							normalsMaterial.EnableKeyword("PREVIEW_NORMAL");
+							continuousRepaint = false;
+							break;
+					}
+
+					if (e.type != EventType.Repaint)
+					{
+						e.Use();
+						Repaint();
+					}
+				}
+
+				if (continuousRepaint)
+				{
+					Vector2 pos = Event.current.mousePosition - r.position;
+					pos -= r.size / 2f;
+					pos += m_Pos;
+					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier)/2f;
+					Vector2 lightPosition = pos / wantedRect.size;
+					normalsMaterial.SetFloat("_LightX", lightPosition.x);
+					normalsMaterial.SetFloat("_LightY", 1-lightPosition.y);
+				}
 			}
 
 			if (e.type == EventType.MouseDrag)
@@ -186,21 +229,28 @@ namespace Vertx
 
 			if (e.type == EventType.ScrollWheel)
 			{
-				float zoomMultiplierLast = zoomMultiplier;
-				zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
-				//Maximum 2x texture zoom
-				zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
-
-				//if zoom has changed
-				if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
+				if (continuousRepaint)
 				{
-					//Focuses Center
-					Vector2 posNormalized = new Vector2(m_Pos.x / wantedRect.width, m_Pos.y / wantedRect.height);
-					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
-					m_Pos = newPos;
-					m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+					lightZ = Mathf.Clamp(lightZ + e.delta.y * 0.01f, 0.01f, 1f);
+					normalsMaterial.SetFloat("_LightZ", lightZ);
 				}
+				else
+				{
+					float zoomMultiplierLast = zoomMultiplier;
+					zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
+					//Maximum 2x texture zoom
+					zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
 
+					//if zoom has changed
+					if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
+					{
+						//Focuses Center
+						Vector2 posNormalized = new Vector2(m_Pos.x / wantedRect.width, m_Pos.y / wantedRect.height);
+						Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
+						m_Pos = newPos;
+						m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+					}
+				}
 				e.Use();
 				Repaint();
 			}
@@ -230,7 +280,6 @@ namespace Vertx
 				}
 				else
 				{
-					bool isNormalMap = IsNormalMap(t);
 					Material matToUse = isNormalMap ? normalsMaterial : rGBAMaterial;
 					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0, mipLevel);
@@ -288,6 +337,9 @@ namespace Vertx
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
+
+			if (continuousRepaint)
+				Repaint();
 		}
 
 		private static Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)

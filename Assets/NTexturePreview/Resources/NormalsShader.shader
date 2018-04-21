@@ -2,7 +2,7 @@
 {
 	Properties
 	{
-		_MainTex ("Texture", 2D) = "white" {}
+		_MainTex ("Texture", 2D) = "bump" {}
 		[Toggle(R)]
         _R ("R", Float) = 1
         [Toggle(G)]
@@ -10,6 +10,9 @@
         [Toggle(B)]
         _B ("B", Float) = 1
         _Mip ("Mip", Float) = 0
+        _LightX ("LightX", Float) = 0.5
+        _LightY ("LightY", Float) = 0.5
+        _LightZ ("LightZ", Float) = 0.1
 	}
 	SubShader
 	{
@@ -27,6 +30,7 @@
 			
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile PREVIEW_NORMAL PREVIEW_DIFFUSE
 			
 			
 			#include "UnityCG.cginc"
@@ -49,6 +53,7 @@
 			sampler2D _MainTex;
 			float4 _MainTex_ST;
 			float _R, _G, _B, _A;
+			float _LightX, _LightY, _LightZ;
 			float _Mip;
 			
 			v2f vert (appdata v)
@@ -64,9 +69,18 @@
 			float4 frag (v2f i) : SV_Target
 			{
 			    clip(tex2D(_GUIClipTexture, i.clipUV).a-0.5);
-				float3 col = UnpackNormal(tex2Dlod(_MainTex, float4(i.uv,0,_Mip))).rgb*0.5+0.5;
-				col = float3(col.r*_R, col.g*_G, col.b*_B);
-				return float4(col, 1);
+			    float3 normal = UnpackNormal(tex2Dlod(_MainTex, float4(i.uv,0,_Mip)));
+			    #if PREVIEW_NORMAL
+                    float3 col = normal*0.5+0.5;
+                    col = float3(col.r*_R, col.g*_G, col.b*_B);
+                    return float4(col, 1);
+                #endif
+				#if PREVIEW_DIFFUSE
+                    float3 fakeLightPos = float3(_LightX, _LightY, _LightZ);
+                    float3 position = float3(i.uv.x, i.uv.y, 0);
+                    float diffuse = dot(normalize(fakeLightPos-position), normalize(normal));
+                    return float4(diffuse, diffuse, diffuse, 1);
+				#endif
 			}
 			ENDCG
 		}
