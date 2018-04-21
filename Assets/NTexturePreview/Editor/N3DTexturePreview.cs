@@ -23,6 +23,7 @@ namespace Vertx
 			/// </summary>
 			/// <returns>The Material used by the N3DTexturePreview if not null</returns>
 			Material GetMaterial(Texture3D texture3D);
+			bool ImplementAxisSliders();
 		}
 
 		void OnEnable()
@@ -32,25 +33,32 @@ namespace Vertx
 
 			//Find all types of I3DMaterialOverride, and query whether there's a valid material for the current target.
 
-			IEnumerable<Type> i3DMaterialOverrideTypes;
 			#if UNITY_2018_1_OR_NEWER
-			i3DMaterialOverrideTypes = (IEnumerable<Type>) Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
+			IEnumerable<Type> i3DMaterialOverrideTypes = (IEnumerable<Type>) Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
 				"GetAllTypesWithInterface", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(Type)}, null
 			).Invoke(null, new object[] {typeof(I3DMaterialOverride)});
 			#else
-			i3DMaterialOverrideTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(p => p != typeof(I3DMaterialOverride) && typeof(I3DMaterialOverride).IsAssignableFrom(p));
+			IEnumerable<Type> i3DMaterialOverrideTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(p => p != typeof(I3DMaterialOverride) && typeof(I3DMaterialOverride).IsAssignableFrom(p));
 			#endif
+			
 			foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
 			{
 				I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
 				m_Material = i3DMaterialOverride.GetMaterial((Texture3D) target);
 				if (m_Material != null)
+				{
+					materialOverride = i3DMaterialOverride;
 					break;
+				}
 			}
 
 			rCallback = r => { material.SetFloat("_R", r ? 1 : 0); };
 			gCallback = g => { material.SetFloat("_G", g ? 1 : 0); };
 			bCallback = b => { material.SetFloat("_B", b ? 1 : 0); };
+			x = 1;
+			y = 1;
+			z = 1;
+			SetXYZFloats();
 		}
 
 		void OnDisable()
@@ -76,6 +84,14 @@ namespace Vertx
 
 		private float zoom = 3f;
 
+		protected float x = 1, y = 1, z = 1;
+
+		enum Axis
+		{
+			X,Y,Z
+		}
+		private Axis axis = Axis.X;
+		
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
@@ -92,6 +108,35 @@ namespace Vertx
 				hasG = hasG || _hasG;
 			}
 
+			if (ImplementAxisSliders() && (materialOverride == null || materialOverride.ImplementAxisSliders()))
+			{
+				Texture3D defaultTex3D = target as Texture3D;
+				if (defaultTex3D != null)
+				{
+					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+					{
+						Vector3 size = new Vector3(defaultTex3D.width, defaultTex3D.height, defaultTex3D.depth);
+						Vector3 sizeCurrent = new Vector3(x * (size.x - 1) + 1, y * (size.y - 1) + 1, z * (size.z - 1) + 1);
+						axis = (Axis) EditorGUILayout.EnumPopup(axis, GUILayout.Width(25));
+						switch (axis)
+						{
+							case Axis.X:
+								x = (EditorGUILayout.IntSlider((int) sizeCurrent.x, 1, (int) size.x) - 1) / (size.x - 1);
+								break;
+							case Axis.Y:
+								y = (EditorGUILayout.IntSlider((int) sizeCurrent.y, 1, (int) size.y) - 1) / (size.y - 1);
+								break;
+							case Axis.Z:
+								z = (EditorGUILayout.IntSlider((int) sizeCurrent.z, 1, (int) size.z) - 1) / (size.z - 1);
+								break;
+						}
+
+						if (changeCheckScope.changed)
+							SetXYZFloats();
+					}
+				}
+			}
+
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
 			{
 				zoom = 3;
@@ -99,6 +144,19 @@ namespace Vertx
 			}
 
 			DrawRGBToggles(hasR, hasB, hasG);
+		}
+
+		public virtual bool ImplementAxisSliders()
+		{
+			return true;
+		}
+
+		void SetXYZFloats()
+		{
+			material.SetFloat("_X", x);
+			material.SetFloat("_Y", y);
+			material.SetFloat("_Z", z);
+			Repaint();
 		}
 
 		public Vector2 m_PreviewDir = new Vector2(0, 0);
@@ -144,6 +202,7 @@ namespace Vertx
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
 			m_PreviewUtility.EndAndDrawPreview(r);
+			Repaint();
 		}
 
 		void InitPreview()
@@ -155,19 +214,17 @@ namespace Vertx
 			}
 		}
 
+		private I3DMaterialOverride materialOverride;
+
 		private Material material
 		{
 			get
 			{
 				if (m_Material == null)
-				{
-					m_Material = new Material(EditorGUIUtility.LoadRequired("Previews/Preview3DTextureMaterial.mat") as Material);
-				}
-
+					m_Material = new Material(Resources.Load<Shader>("RGB3DShader"));
 				return m_Material;
 			}
 		}
-
 		private Material m_Material;
 
 		#region PreviewGUI

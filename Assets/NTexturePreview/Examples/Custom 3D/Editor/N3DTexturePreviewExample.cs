@@ -10,8 +10,13 @@ namespace Vertx
 			if (!texture3D.name.Equals("3DTexturePreviewExample"))
 				return null;
 			if (m_material == null)
-				m_material = new Material(Resources.Load<Shader>("RGBA3DShader"));
+				m_material = new Material(Resources.Load<Shader>("RGBARaymarchShader"));
 			return m_material;
+		}
+
+		public bool ImplementAxisSliders()
+		{
+			return false;
 		}
 	}
 }

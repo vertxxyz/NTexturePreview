@@ -1,10 +1,4 @@
-﻿// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
-
-// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Hidden/RGBA3DShader"
+﻿Shader "Hidden/RGBA3DShader"
 {
 	Properties
 	{
@@ -38,6 +32,8 @@ Shader "Hidden/RGBA3DShader"
 			#define ROOT3 1.73205081
 			#define DIST ROOT3/MAX_STEPS
 
+            //This implementation raymarches back-to-front to accumulate, as it's easier to support zooming, and doesn't require a box-cast,
+            //it just starts from back-faces first.
             //origin is the camera position - we need to check whether we're behind the camera because we support zooming!
 			float4 raymarch (float3 position, float3 origin, float3 direction) {
 				float4 accumulation = 0;
@@ -62,15 +58,15 @@ Shader "Hidden/RGBA3DShader"
 
 			struct v2f
 			{
-				float4 pos : SV_POSITION;
+			    float4 pos : SV_POSITION;
 				float4 v : TEXCOORD1;
 			};
 			
 			v2f vert (appdata v)
 			{
 				v2f o;
-				o.pos = UnityObjectToClipPos(v.vertex);
 				o.v = v.vertex;
+				o.pos = UnityObjectToClipPos(v.vertex);
 				return o;
 			}
 			
