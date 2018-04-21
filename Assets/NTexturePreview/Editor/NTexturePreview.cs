@@ -197,9 +197,8 @@ namespace Vertx
 					pos -= r.size / 2f;
 					pos += m_Pos;
 					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier)/2f;
-					Vector2 lightPosition = pos / wantedRect.size;
-					normalsMaterial.SetFloat("_LightX", lightPosition.x);
-					normalsMaterial.SetFloat("_LightY", 1-lightPosition.y);
+					normalsMaterial.SetFloat("_LightX", pos.x / wantedRect.size.x);
+					normalsMaterial.SetFloat("_LightY", 1- (pos.y / wantedRect.size.y));
 				}
 			}
 
@@ -276,7 +275,11 @@ namespace Vertx
 				{
 					float imageAspect = t.width / (float)t.height;
 					DrawTransparencyCheckerTexture(wantedRect, ScaleMode.StretchToFill, imageAspect);
+					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
+					#else
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect);
+					#endif
 				}
 				else
 				{
