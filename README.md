@@ -1,6 +1,8 @@
 # NTexturePreview
 Enhanced Texture Previewer for Unity
 
+**Currently Unity 2017.3+**
+
 ### Advancements
 
 - RGB Toggles (CTRL+CLICK for Single-Channel)
