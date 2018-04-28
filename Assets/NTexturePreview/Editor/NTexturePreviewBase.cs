@@ -7,6 +7,11 @@ namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
+		protected virtual void OnDisable()
+		{
+			SetRGBTo(true, true, true);
+		}
+
 		protected enum TextureUsageMode
 		{
 			Default = 0,

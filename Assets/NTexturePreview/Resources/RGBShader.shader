@@ -66,6 +66,13 @@
 			    clip(tex2D(_GUIClipTexture, i.clipUV).a-0.5);
 				float3 col = tex2Dlod(_MainTex, float4(i.uv,0,_Mip)).rgb;
 				col = float3(col.r*_R, col.g*_G, col.b*_B);
+				float _ROnly = lerp(lerp(_R, 0, _G), 0, _B);
+				float _GOnly = lerp(lerp(_G, 0, _R), 0, _B);
+				float _BOnly = lerp(lerp(_B, 0, _R), 0, _G);
+				col = float3(
+				    lerp(lerp(col.r, col.g, _GOnly), col.b, _BOnly),
+				    lerp(lerp(col.g, col.r, _ROnly), col.b, _BOnly),
+				    lerp(lerp(col.b, col.r, _ROnly), col.g, _GOnly));
 				return float4(col, 1);
 			}
 			ENDCG
