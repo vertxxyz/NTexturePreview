@@ -7,6 +7,11 @@ namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
+		protected virtual void OnDisable()
+		{
+			SetRGBTo(true, true, true);
+		}
+
 		protected enum TextureUsageMode
 		{
 			Default = 0,
@@ -132,21 +137,36 @@ namespace Vertx
 		protected class Styles
 		{
 			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
-			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel;
+			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel, previewDropDown;
 			public readonly GUIStyle previewButton_R, previewButton_G, previewButton_B;
 
+			#if UNITY_2018_2_OR_NEWER
+			public readonly GUIContent wrapModeLabel = EditorGUIUtility.TrTextContent("Wrap Mode");
+			public readonly GUIContent wrapU = EditorGUIUtility.TrTextContent("U axis");
+			public readonly GUIContent wrapV = EditorGUIUtility.TrTextContent("V axis");
+			public readonly GUIContent wrapW = EditorGUIUtility.TrTextContent("W axis");
+			#else
 			public readonly GUIContent wrapModeLabel = TrTextContent("Wrap Mode");
 			public readonly GUIContent wrapU = TrTextContent("U axis");
 			public readonly GUIContent wrapV = TrTextContent("V axis");
 			public readonly GUIContent wrapW = TrTextContent("W axis");
+			#endif
 
 			public readonly GUIContent[] wrapModeContents =
 			{
+				#if UNITY_2018_2_OR_NEWER
+				EditorGUIUtility.TrTextContent("Repeat"),
+				EditorGUIUtility.TrTextContent("Clamp"),
+				EditorGUIUtility.TrTextContent("Mirror"),
+				EditorGUIUtility.TrTextContent("Mirror Once"),
+				EditorGUIUtility.TrTextContent("Per-axis")
+				#else
 				TrTextContent("Repeat"),
 				TrTextContent("Clamp"),
 				TrTextContent("Mirror"),
 				TrTextContent("Mirror Once"),
 				TrTextContent("Per-axis")
+				#endif
 			};
 
 			public readonly int[] wrapModeValues =
@@ -168,6 +188,7 @@ namespace Vertx
 				previewButton = "preButton";
 				previewSlider = "preSlider";
 				previewSliderThumb = "preSliderThumb";
+				previewDropDown = "PreDropDown";
 				previewLabel = new GUIStyle("preLabel")
 				{
 					// UpperCenter centers the mip icons vertically better than MiddleCenter
@@ -183,6 +204,7 @@ namespace Vertx
 				previewButton_B = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0f, 0.65f, 1f)}};
 			}
 
+			#if !UNITY_2018_2_OR_NEWER
 			private static MethodInfo _TrTextContent;
 
 			private static GUIContent TrTextContent(string s)
@@ -191,6 +213,7 @@ namespace Vertx
 					_TrTextContent = typeof(EditorGUIUtility).GetMethod("TrTextContent", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(string), typeof(string), typeof(Texture)}, null);
 				return (GUIContent) _TrTextContent.Invoke(null, new object[] {s, null, null});
 			}
+			#endif
 		}
 
 		private static Styles _s_Styles;

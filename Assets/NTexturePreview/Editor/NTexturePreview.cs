@@ -26,14 +26,17 @@ namespace Vertx
 			rCallback = r => {
 				rGBAMaterial.SetFloat("_R", r ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_R", r ? 1 : 0);
+				normalsMaterial.SetFloat("_R", r ? 1 : 0);
 			};
 			gCallback = g => {
 				rGBAMaterial.SetFloat("_G", g ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_G", g ? 1 : 0);
+				normalsMaterial.SetFloat("_G", g ? 1 : 0);
 			};
 			bCallback = b => {
 				rGBAMaterial.SetFloat("_B", b ? 1 : 0);
 				rGBATransparentMaterial.SetFloat("_B", b ? 1 : 0);
+				normalsMaterial.SetFloat("_B", b ? 1 : 0);
 			};
 		}
 
@@ -42,7 +45,6 @@ namespace Vertx
 		[SerializeField] protected Vector2 m_Pos;
 		
 		private static Material _rGBAMaterial;
-
 		protected static Material rGBAMaterial
 		{
 			get
@@ -54,7 +56,6 @@ namespace Vertx
 		}
 
 		private static Material _rGBATransparentMaterial;
-
 		protected static Material rGBATransparentMaterial
 		{
 			get
@@ -64,9 +65,22 @@ namespace Vertx
 				return _rGBATransparentMaterial;
 			}
 		}
+		
+		private static Material _normalsMaterial;
 
-		void OnDisable()
+		protected static Material normalsMaterial
 		{
+			get
+			{
+				if (_normalsMaterial == null)
+					_normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader"));
+				return _normalsMaterial;
+			}
+		}
+
+		protected override void OnDisable()
+		{
+			base.OnDisable();
 			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.
 			//Also, make sure to call any required methods like OnDisable
 			MethodInfo disableMethod = defaultEditor.GetType().GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
@@ -109,6 +123,10 @@ namespace Vertx
 			PreviewTexture(r, t, background, e);
 		}
 
+		//Variables for normal map diffuse preview.
+		private bool continuousRepaint;
+		private float lightZ = 0.1f;
+		
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			// Render target must be created before we can display it (case 491797)
@@ -132,6 +150,8 @@ namespace Vertx
 				//There seems to be some unhelpful layout and repaint steps that provide rect scales that are unhelpful...
 				return;
 			}
+			
+			bool isNormalMap = IsNormalMap(t);
 
 			// target can report zero sizes in some cases just after a parameter change;
 			// guard against that.
@@ -145,6 +165,42 @@ namespace Vertx
 			if (e.type == EventType.MouseDown)
 			{
 				hasDragged = false;
+			}
+			
+			if (isNormalMap)
+			{
+				if (e.button == 1)
+				{
+					switch (e.type)
+					{
+						case EventType.MouseDown:
+							normalsMaterial.EnableKeyword("PREVIEW_DIFFUSE");
+							normalsMaterial.DisableKeyword("PREVIEW_NORMAL");
+							continuousRepaint = true;
+							break;
+						case EventType.MouseUp:
+							normalsMaterial.DisableKeyword("PREVIEW_DIFFUSE");
+							normalsMaterial.EnableKeyword("PREVIEW_NORMAL");
+							continuousRepaint = false;
+							break;
+					}
+
+					if (e.type != EventType.Repaint)
+					{
+						e.Use();
+						Repaint();
+					}
+				}
+
+				if (continuousRepaint)
+				{
+					Vector2 pos = Event.current.mousePosition - r.position;
+					pos -= r.size / 2f;
+					pos += m_Pos;
+					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier)/2f;
+					normalsMaterial.SetFloat("_LightX", pos.x / wantedRect.size.x);
+					normalsMaterial.SetFloat("_LightY", 1- (pos.y / wantedRect.size.y));
+				}
 			}
 
 			if (e.type == EventType.MouseDrag)
@@ -173,21 +229,28 @@ namespace Vertx
 
 			if (e.type == EventType.ScrollWheel)
 			{
-				float zoomMultiplierLast = zoomMultiplier;
-				zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
-				//Maximum 2x texture zoom
-				zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
-
-				//if zoom has changed
-				if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
+				if (continuousRepaint)
 				{
-					//Focuses Center
-					Vector2 posNormalized = m_Pos / new Vector2(wantedRect.width, wantedRect.height);
-					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
-					m_Pos = newPos;
-					m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+					lightZ = Mathf.Clamp(lightZ + e.delta.y * 0.01f, 0.01f, 1f);
+					normalsMaterial.SetFloat("_LightZ", lightZ);
 				}
+				else
+				{
+					float zoomMultiplierLast = zoomMultiplier;
+					zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
+					//Maximum 2x texture zoom
+					zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
 
+					//if zoom has changed
+					if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
+					{
+						//Focuses Center
+						Vector2 posNormalized = new Vector2(m_Pos.x / wantedRect.width, m_Pos.y / wantedRect.height);
+						Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
+						m_Pos = newPos;
+						m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+					}
+				}
 				e.Use();
 				Repaint();
 			}
@@ -202,26 +265,31 @@ namespace Vertx
 
 				Texture2D t2d = t as Texture2D;
 				if (m_ShowAlpha)
+				{
+					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawTextureAlpha(wantedRect, t, ScaleMode.StretchToFill, 0, mipLevel);
+					#else
+					EditorGUI.DrawTextureAlpha(wantedRect, t, ScaleMode.StretchToFill, 0);
+					#endif
+				}
 				else if (t2d != null && t2d.alphaIsTransparency)
 				{
-					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-					renderTexture.filterMode = t.filterMode;
-					RenderTexture rTActive = RenderTexture.active;
-					Graphics.Blit(t, renderTexture, rGBATransparentMaterial);
-					RenderTexture.active = rTActive;
-					EditorGUI.DrawTextureTransparent(wantedRect, renderTexture, ScaleMode.StretchToFill, 0, mipLevel);
-					RenderTexture.ReleaseTemporary(renderTexture);
+					float imageAspect = t.width / (float)t.height;
+					DrawTransparencyCheckerTexture(wantedRect, ScaleMode.StretchToFill, imageAspect);
+					#if UNITY_2018_1_OR_NEWER
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
+					#else
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect);
+					#endif
 				}
 				else
 				{
-					RenderTexture renderTexture = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-					renderTexture.filterMode = t.filterMode;
-					RenderTexture rTActive = RenderTexture.active;
-					Graphics.Blit(t, renderTexture, rGBAMaterial);
-					RenderTexture.active = rTActive;
-					EditorGUI.DrawPreviewTexture(wantedRect, renderTexture, null, ScaleMode.StretchToFill, 0, mipLevel); //
-					RenderTexture.ReleaseTemporary(renderTexture);
+					Material matToUse = isNormalMap ? normalsMaterial : rGBAMaterial;
+					#if UNITY_2018_1_OR_NEWER
+					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0, mipLevel);
+					#else
+					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0);
+					#endif
 				}
 
 				// TODO: Less hacky way to prevent sprite rects to not appear in smaller previews like icons.
@@ -273,6 +341,9 @@ namespace Vertx
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
+
+			if (continuousRepaint)
+				Repaint();
 		}
 
 		private static Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
@@ -434,7 +505,7 @@ namespace Vertx
 				{
 					int texWidth = Mathf.Max(tex.width, 1);
 					int texHeight = Mathf.Max(tex.height, 1);
-					Vector2 posNormalized = m_Pos / new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
+					Vector2 posNormalized = new Vector2(m_Pos.x / (texWidth * zoomLevel * zoomMultiplier), m_Pos.y / (texHeight * zoomLevel * zoomMultiplier));
 					//Zooms to 100
 					zoomMultiplier = p100;
 
@@ -550,6 +621,15 @@ namespace Vertx
 					hasB = false;
 					break;
 			}
+		}
+		
+		private static MethodInfo _DrawTransparencyCheckerTexture;
+
+		private static void DrawTransparencyCheckerTexture(Rect wantedRect, ScaleMode scaleMode, float imageAspect)
+		{
+			if (_DrawTransparencyCheckerTexture == null)
+				_DrawTransparencyCheckerTexture = typeof(EditorGUI).GetMethod("DrawTransparencyCheckerTexture", BindingFlags.NonPublic | BindingFlags.Static);
+			_DrawTransparencyCheckerTexture.Invoke(null, new object[] {wantedRect, scaleMode, imageAspect});
 		}
 
 		private static Type m_TextureUtilType;
