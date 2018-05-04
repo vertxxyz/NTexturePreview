@@ -101,7 +101,7 @@ namespace Vertx
 
 		private float zoomLevel;
 		private float zoomMultiplier = 1;
-		private const float maxZoomNormalized = 6;
+		private const float maxZoomNormalized = 10;
 
 		private bool hasDragged;
 
@@ -237,7 +237,7 @@ namespace Vertx
 				else
 				{
 					float zoomMultiplierLast = zoomMultiplier;
-					zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * 0.1f);
+					zoomMultiplier = Mathf.Max(1, zoomMultiplier - e.delta.y * zoomMultiplier * 0.1f);
 					//Maximum 2x texture zoom
 					zoomMultiplier = Mathf.Clamp(zoomMultiplier, 1, maxZoomNormalized / zoomLevel);
 
