@@ -1,7 +1,7 @@
 # NTexturePreview
 Enhanced Texture Previewer for Unity
 
-**Currently Unity 2017.3+**
+**Currently Unity 2018.3+**
 
 ### Advancements
 
@@ -29,3 +29,11 @@ You can override the Material used for the 3D Texture Preview. This is done by i
 An example is provided at NTexturePreview/Examples/Custom 3D/Editor/N3DTexturePreviewExample.cs. The file specifically operates on Texture3D assets named "3DTexturePreviewExample", but a method of your own might perform any logic to provide a custom preview material.
 
 ![gif](http://vertx.xyz/wp-content/uploads/2018/04/3dTexturePreview2.gif)
+
+
+## Installation
+Ensure your project is on .NET 4.x by navigating to Edit>Project Settings>Player>Configuration>Scripting Runtime Version and switching to .NET 4.x Equivalent.
+
+Pull the project locally and use the Package Manager (Window>Package Manager), adding the package.json file present in the root of the folder with the `+` button.
+
+Or edit your Package.json file to contain `"com.vertx.ntexturepreview": "https://github.com/vertxxyz/NTexturePreview.git",`
