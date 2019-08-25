@@ -14,6 +14,13 @@ namespace Vertx
 	[CanEditMultipleObjects]
 	public class N3DTexturePreview : NTexturePreviewBase
 	{
+		private static readonly int R = Shader.PropertyToID("_R");
+		private static readonly int G = Shader.PropertyToID("_G");
+		private static readonly int B = Shader.PropertyToID("_B");
+		private static readonly int X = Shader.PropertyToID("_X");
+		private static readonly int Y = Shader.PropertyToID("_Y");
+		private static readonly int Z = Shader.PropertyToID("_Z");
+		
 		/// <summary>
 		/// An interface for overriding the Material used by this previewer
 		/// </summary>
@@ -142,7 +149,7 @@ namespace Vertx
 				}
 			}
 
-			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
+			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
 				zoom = 3;
 				Repaint();
@@ -151,10 +158,7 @@ namespace Vertx
 			DrawRGBToggles(hasR, hasB, hasG);
 		}
 
-		public virtual bool ImplementAxisSliders()
-		{
-			return true;
-		}
+		public virtual bool ImplementAxisSliders() => true;
 
 		void SetXYZFloats()
 		{
@@ -203,7 +207,7 @@ namespace Vertx
 
 			cameraTransform.rotation = Quaternion.identity;
 			Quaternion rot = Quaternion.Euler(m_PreviewDir.y, 0, 0) * Quaternion.Euler(0, m_PreviewDir.x, 0);
-			m_PreviewUtility.DrawMesh(mesh, Vector3.zero, rot, material, 0);
+			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, material, 0);
 			m_PreviewUtility.Render();
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
@@ -275,21 +279,14 @@ namespace Vertx
 
 		#endregion
 
-		private Mesh _mesh;
-		private static readonly int R = Shader.PropertyToID("_R");
-		private static readonly int G = Shader.PropertyToID("_G");
-		private static readonly int B = Shader.PropertyToID("_B");
-		private static readonly int X = Shader.PropertyToID("_X");
-		private static readonly int Y = Shader.PropertyToID("_Y");
-		private static readonly int Z = Shader.PropertyToID("_Z");
-
-		protected Mesh mesh
+		private Mesh mesh;
+		protected Mesh Mesh
 		{
 			get
 			{
-				if (_mesh == null)
-					_mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-				return _mesh;
+				if (mesh == null)
+					mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+				return mesh;
 			}
 		}
 

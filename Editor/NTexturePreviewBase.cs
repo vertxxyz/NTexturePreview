@@ -129,66 +129,33 @@ namespace Vertx
 			}
 		}
 
-		public override string GetInfoString()
-		{
-			return defaultEditor.GetInfoString();
-		}
+		public override string GetInfoString() => defaultEditor.GetInfoString();
 
 		protected class Styles
 		{
-			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon;
+			public readonly GUIContent smallZoom, largeZoom, alphaIcon, RGBIcon, scaleIcon, playIcon;
 			public readonly GUIStyle previewButton, previewSlider, previewSliderThumb, previewLabel, previewDropDown;
+			public readonly GUIStyle previewButtonScale;
 			public readonly GUIStyle previewButton_R, previewButton_G, previewButton_B;
-
-			#if UNITY_2018_2_OR_NEWER
-			public readonly GUIContent wrapModeLabel = EditorGUIUtility.TrTextContent("Wrap Mode");
-			public readonly GUIContent wrapU = EditorGUIUtility.TrTextContent("U axis");
-			public readonly GUIContent wrapV = EditorGUIUtility.TrTextContent("V axis");
-			public readonly GUIContent wrapW = EditorGUIUtility.TrTextContent("W axis");
-			#else
-			public readonly GUIContent wrapModeLabel = TrTextContent("Wrap Mode");
-			public readonly GUIContent wrapU = TrTextContent("U axis");
-			public readonly GUIContent wrapV = TrTextContent("V axis");
-			public readonly GUIContent wrapW = TrTextContent("W axis");
-			#endif
-
-			public readonly GUIContent[] wrapModeContents =
-			{
-				#if UNITY_2018_2_OR_NEWER
-				EditorGUIUtility.TrTextContent("Repeat"),
-				EditorGUIUtility.TrTextContent("Clamp"),
-				EditorGUIUtility.TrTextContent("Mirror"),
-				EditorGUIUtility.TrTextContent("Mirror Once"),
-				EditorGUIUtility.TrTextContent("Per-axis")
-				#else
-				TrTextContent("Repeat"),
-				TrTextContent("Clamp"),
-				TrTextContent("Mirror"),
-				TrTextContent("Mirror Once"),
-				TrTextContent("Per-axis")
-				#endif
-			};
-
-			public readonly int[] wrapModeValues =
-			{
-				(int) TextureWrapMode.Repeat,
-				(int) TextureWrapMode.Clamp,
-				(int) TextureWrapMode.Mirror,
-				(int) TextureWrapMode.MirrorOnce,
-				-1
-			};
 
 			public Styles()
 			{
 				smallZoom = EditorGUIUtility.IconContent("PreTextureMipMapLow");
 				largeZoom = EditorGUIUtility.IconContent("PreTextureMipMapHigh");
 				alphaIcon = EditorGUIUtility.IconContent("PreTextureAlpha");
-				scaleIcon = EditorGUIUtility.IconContent("ViewToolZoom On");
+				scaleIcon = new GUIContent(EditorGUIUtility.IconContent("ViewToolZoom On")) {image = {filterMode = FilterMode.Bilinear}, tooltip = "Reset Zoom"};
 				RGBIcon = EditorGUIUtility.IconContent("PreTextureRGB");
+				playIcon = new GUIContent(EditorGUIUtility.IconContent("d_Animation.Play")) {tooltip = "Continuous Repaint"};
 				previewButton = "preButton";
 				previewSlider = "preSlider";
 				previewSliderThumb = "preSliderThumb";
 				previewDropDown = "PreDropDown";
+
+				previewButtonScale = new GUIStyle(previewButton)
+				{
+					padding = new RectOffset(0, 0, 3, 2),
+					fixedWidth = 20
+				};
 				previewLabel = new GUIStyle("preLabel")
 				{
 					// UpperCenter centers the mip icons vertically better than MiddleCenter
@@ -203,17 +170,6 @@ namespace Vertx
 				previewButton_G = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0.45f, 1f, 0.28f)}};
 				previewButton_B = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0f, 0.65f, 1f)}};
 			}
-
-			#if !UNITY_2018_2_OR_NEWER
-			private static MethodInfo _TrTextContent;
-
-			private static GUIContent TrTextContent(string s)
-			{
-				if (_TrTextContent == null)
-					_TrTextContent = typeof(EditorGUIUtility).GetMethod("TrTextContent", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(string), typeof(string), typeof(Texture)}, null);
-				return (GUIContent) _TrTextContent.Invoke(null, new object[] {s, null, null});
-			}
-			#endif
 		}
 
 		private static Styles _s_Styles;

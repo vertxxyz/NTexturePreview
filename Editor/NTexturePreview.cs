@@ -132,6 +132,9 @@ namespace Vertx
 		//Variables for normal map diffuse preview.
 		private bool continuousRepaint;
 		private float lightZ = 0.1f;
+		
+		//Render texture repaint (play)
+		private bool continuousRepaintOverride;
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
@@ -147,6 +150,13 @@ namespace Vertx
 			if (IsCubemap())
 			{
 				//TODO perhaps support custom cubemap settings. Not currently!
+				defaultEditor.OnPreviewGUI(r, background);
+				return;
+			}
+
+			if (IsVolume())
+			{
+				//TODO perhaps support 3D rendertexture settings. Not currently!
 				defaultEditor.OnPreviewGUI(r, background);
 				return;
 			}
@@ -366,7 +376,7 @@ namespace Vertx
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
 
-			if (continuousRepaint)
+			if (continuousRepaint || continuousRepaintOverride)
 				Repaint();
 		}
 
@@ -407,7 +417,7 @@ namespace Vertx
 		bool IsVolume()
 		{
 			var t = target as Texture;
-			return t != null && t.dimension == TextureDimension.Tex3D;
+			return t != null && (t.dimension == TextureDimension.Tex3D || t.dimension == TextureDimension.Tex2DArray);
 		}
 
 		private bool m_ShowAlpha;
@@ -417,6 +427,13 @@ namespace Vertx
 			if (IsCubemap())
 			{
 				//TODO perhaps support custom cubemap settings. Not currently!
+				defaultEditor.OnPreviewSettings();
+				return;
+			}
+			
+			if (IsVolume())
+			{
+				//TODO perhaps support 3D rendertexture settings. Not currently!
 				defaultEditor.OnPreviewSettings();
 				return;
 			}
@@ -504,7 +521,11 @@ namespace Vertx
 //				Selection.activeObject = previewShader;
 //			}
 
-			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
+			RenderTexture rT = tex as RenderTexture;
+			if (rT != null)
+				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
+
+			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
 				//Switch between the default % zoom, and 100% zoom
 				float p100 = 1 / zoomLevel;
@@ -556,8 +577,8 @@ namespace Vertx
 					m_MipLevel = Mathf.Round(GUILayout.HorizontalSlider(m_MipLevel, mipCount - 1, 0, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.MaxWidth(64)));
 					if (changeCheckScope.changed)
 					{
-						rGBAMaterial.SetFloat("_Mip", m_MipLevel);
-						rGBATransparentMaterial.SetFloat("_Mip", m_MipLevel);
+						rGBAMaterial.SetFloat(Mip, m_MipLevel);
+						rGBATransparentMaterial.SetFloat(Mip, m_MipLevel);
 						Repaint();
 					}
 				}
@@ -733,6 +754,7 @@ namespace Vertx
 		}
 
 		private static MethodInfo m_GUICalculateScaledTextureRects;
+		private static readonly int Mip = Shader.PropertyToID("_Mip");
 
 		private static void GUICalculateScaledTextureRects(Rect position, ScaleMode scaleMode, float imageAspect, ref Rect outScreenRect, ref Rect outSourceRect)
 		{
