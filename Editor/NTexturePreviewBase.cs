@@ -7,10 +7,7 @@ namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
-		protected virtual void OnDisable()
-		{
-			SetRGBTo(true, true, true);
-		}
+		protected virtual void OnDisable() => SetRGBTo(true, true, true);
 
 		protected enum TextureUsageMode
 		{
@@ -31,21 +28,19 @@ namespace Vertx
 			BakedLightmapFullHDR = 8,
 			RealtimeLightmapRGBM = 9,
 		}
+
 		protected Editor defaultEditor;
 		private bool m_R = true, m_G = true, m_B = true;
 
 		private void SetRGBTo(bool R, bool G, bool B)
 		{
 			m_R = R;
-			if(rCallback != null)
-				rCallback.Invoke(m_R);
-			
+			rCallback?.Invoke(m_R);
+
 			m_G = G;
-			if(gCallback != null)
-				gCallback.Invoke(m_G);
+			gCallback?.Invoke(m_G);
 			m_B = B;
-			if(bCallback != null)
-				bCallback.Invoke(m_B);
+			bCallback?.Invoke(m_B);
 		}
 
 		protected Action<bool> rCallback;
@@ -70,10 +65,11 @@ namespace Vertx
 					{
 						if (!Event.current.control)
 						{
-							if(rCallback != null)
-								rCallback.Invoke(m_R);
-						} else
+							rCallback?.Invoke(m_R);
+						}
+						else
 							SetRGBTo(true, false, false);
+
 						Repaint();
 					}
 				}
@@ -91,13 +87,15 @@ namespace Vertx
 					{
 						if (!Event.current.control)
 						{
-							if(gCallback != null)
-								gCallback.Invoke(m_G);
-						} else
+							gCallback?.Invoke(m_G);
+						}
+						else
 							SetRGBTo(false, true, false);
+
 						Repaint();
 					}
 				}
+
 				if (m_G)
 					allOff = false;
 			}
@@ -111,13 +109,15 @@ namespace Vertx
 					{
 						if (!Event.current.control)
 						{
-							if(bCallback != null)
-								bCallback.Invoke(m_B);
-						} else
+							bCallback?.Invoke(m_B);
+						}
+						else
 							SetRGBTo(false, false, true);
+
 						Repaint();
 					}
 				}
+
 				if (m_B)
 					allOff = false;
 			}
@@ -217,11 +217,7 @@ namespace Vertx
 		}
 
 		private static Styles _s_Styles;
-
-		protected static Styles s_Styles
-		{
-			get { return _s_Styles ?? (_s_Styles = new Styles()); }
-		}
+		protected static Styles s_Styles => _s_Styles ?? (_s_Styles = new Styles());
 
 		protected static void DrawRect(Rect rect)
 		{

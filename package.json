@@ -1,0 +1,11 @@
+{
+  "name": "com.vertx.ntexturepreview",
+  "displayName":  "nTexturePreview",
+  "version": "1.0.1",
+  "unity": "2018.3",
+  "description": "Enhanced Texture Previewer for Unity",
+  "keywords": [ "Editor" ],
+  "category": "Tools",
+  "dependencies": {
+  }
+}
