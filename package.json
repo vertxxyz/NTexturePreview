@@ -1,0 +1,44 @@
+{
+  "name": "com.vertx.ntexturepreview",
+  "displayName":  "nTexturePreview",
+  "version": "1.0.1",
+  "unity": "2018.3",
+  "description": "Enhanced Texture Previewer for Unity",
+  "keywords": [ "Editor" ],
+  "category": "Tools",
+  "dependencies": {
+  },
+  "samples": [
+
+   {
+
+     "displayName": "Example Textures",
+
+     "description": "Plain example textures. Texture, Normal Map, 3D Texture",
+
+     "path": "Samples~/Textures"
+
+   },
+
+   {
+
+     "displayName": "Render Texture",
+
+     "description": "Simple RenderTexture setup",
+
+     "path": "Samples~/RenderTexture"
+
+   },
+
+   {
+
+     "displayName": "Custom 3D",
+
+     "description": "A raymarched 3D Texture setup",
+
+     "path": "Samples~/Custom 3D"
+
+   }
+
+ ]
+}

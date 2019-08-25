@@ -10,10 +10,17 @@ namespace Vertx
 	[CustomEditor(typeof(Texture2D), true), CanEditMultipleObjects]
 	public class NTexturePreview : NTexturePreviewBase
 	{
+		private static readonly int LightX = Shader.PropertyToID("_LightX");
+		private static readonly int LightY = Shader.PropertyToID("_LightY");
+		private static readonly int LightZ = Shader.PropertyToID("_LightZ");
+		private static readonly int R = Shader.PropertyToID("_R");
+		private static readonly int G = Shader.PropertyToID("_G");
+		private static readonly int B = Shader.PropertyToID("_B");
+
 		protected void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
-			if(defaultEditor == null)
+			if (defaultEditor == null)
 				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
 			animatedPos = new AnimVector3(Vector3.zero, () =>
 			{
@@ -23,28 +30,32 @@ namespace Vertx
 			{
 				speed = 1.5f
 			};
-			rCallback = r => {
-				rGBAMaterial.SetFloat("_R", r ? 1 : 0);
-				rGBATransparentMaterial.SetFloat("_R", r ? 1 : 0);
-				normalsMaterial.SetFloat("_R", r ? 1 : 0);
+			rCallback = r =>
+			{
+				rGBAMaterial.SetFloat(R, r ? 1 : 0);
+				rGBATransparentMaterial.SetFloat(R, r ? 1 : 0);
+				normalsMaterial.SetFloat(R, r ? 1 : 0);
 			};
-			gCallback = g => {
-				rGBAMaterial.SetFloat("_G", g ? 1 : 0);
-				rGBATransparentMaterial.SetFloat("_G", g ? 1 : 0);
-				normalsMaterial.SetFloat("_G", g ? 1 : 0);
+			gCallback = g =>
+			{
+				rGBAMaterial.SetFloat(G, g ? 1 : 0);
+				rGBATransparentMaterial.SetFloat(G, g ? 1 : 0);
+				normalsMaterial.SetFloat(G, g ? 1 : 0);
 			};
-			bCallback = b => {
-				rGBAMaterial.SetFloat("_B", b ? 1 : 0);
-				rGBATransparentMaterial.SetFloat("_B", b ? 1 : 0);
-				normalsMaterial.SetFloat("_B", b ? 1 : 0);
+			bCallback = b =>
+			{
+				rGBAMaterial.SetFloat(B, b ? 1 : 0);
+				rGBATransparentMaterial.SetFloat(B, b ? 1 : 0);
+				normalsMaterial.SetFloat(B, b ? 1 : 0);
 			};
 		}
 
 		[SerializeField] float m_MipLevel;
 
 		[SerializeField] protected Vector2 m_Pos;
-		
+
 		private static Material _rGBAMaterial;
+
 		protected static Material rGBAMaterial
 		{
 			get
@@ -56,6 +67,7 @@ namespace Vertx
 		}
 
 		private static Material _rGBATransparentMaterial;
+
 		protected static Material rGBATransparentMaterial
 		{
 			get
@@ -65,7 +77,7 @@ namespace Vertx
 				return _rGBATransparentMaterial;
 			}
 		}
-		
+
 		private static Material _normalsMaterial;
 
 		protected static Material normalsMaterial
@@ -89,15 +101,9 @@ namespace Vertx
 			DestroyImmediate(defaultEditor);
 		}
 
-		public override void OnInspectorGUI()
-		{
-			defaultEditor.OnInspectorGUI();
-		}
+		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
 
-		public override bool HasPreviewGUI()
-		{
-			return target != null;
-		}
+		public override bool HasPreviewGUI() => target != null;
 
 		private float zoomLevel;
 		private float zoomMultiplier = 1;
@@ -127,6 +133,9 @@ namespace Vertx
 		private bool continuousRepaint;
 		private float lightZ = 0.1f;
 		
+		//Render texture repaint (play)
+		private bool continuousRepaintOverride;
+
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			// Render target must be created before we can display it (case 491797)
@@ -145,12 +154,19 @@ namespace Vertx
 				return;
 			}
 
+			if (IsVolume())
+			{
+				//TODO perhaps support 3D rendertexture settings. Not currently!
+				defaultEditor.OnPreviewGUI(r, background);
+				return;
+			}
+
 			if (r.width == 32 && r.height == 32 || r.width == 1 && r.height == 1)
 			{
 				//There seems to be some unhelpful layout and repaint steps that provide rect scales that are unhelpful...
 				return;
 			}
-			
+
 			bool isNormalMap = IsNormalMap(t);
 
 			// target can report zero sizes in some cases just after a parameter change;
@@ -159,6 +175,23 @@ namespace Vertx
 			int texHeight = Mathf.Max(t.height, 1);
 
 			float mipLevel = GetMipLevelForRendering();
+			
+			float GetMipLevelForRendering()
+			{
+				if (target == null)
+					return 0.0f;
+
+				if (IsCubemap())
+				{
+					throw new NotImplementedException();
+					//This should never be called yet by this class, and is handled by the default editor.
+					//TODO support cubemap rendering here too
+					//return m_CubemapPreview.GetMipLevelForRendering(target as Texture);
+				}
+
+				return Mathf.Min(m_MipLevel, GetMipmapCount(target as Texture) - 1);
+			}
+			
 			zoomLevel = Mathf.Min(Mathf.Min(r.width / texWidth, r.height / texHeight), 1);
 			Rect wantedRect = new Rect(r.x, r.y, texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
 
@@ -166,7 +199,7 @@ namespace Vertx
 			{
 				hasDragged = false;
 			}
-			
+
 			if (isNormalMap)
 			{
 				if (e.button == 1)
@@ -197,9 +230,9 @@ namespace Vertx
 					Vector2 pos = Event.current.mousePosition - r.position;
 					pos -= r.size / 2f;
 					pos += m_Pos;
-					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier)/2f;
-					normalsMaterial.SetFloat("_LightX", pos.x / wantedRect.size.x);
-					normalsMaterial.SetFloat("_LightY", 1- (pos.y / wantedRect.size.y));
+					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
+					normalsMaterial.SetFloat(LightX, pos.x / wantedRect.size.x);
+					normalsMaterial.SetFloat(LightY, 1 - (pos.y / wantedRect.size.y));
 				}
 			}
 
@@ -232,7 +265,7 @@ namespace Vertx
 				if (continuousRepaint)
 				{
 					lightZ = Mathf.Clamp(lightZ + e.delta.y * 0.01f, 0.01f, 1f);
-					normalsMaterial.SetFloat("_LightZ", lightZ);
+					normalsMaterial.SetFloat(LightZ, lightZ);
 				}
 				else
 				{
@@ -251,6 +284,7 @@ namespace Vertx
 						m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
 					}
 				}
+
 				e.Use();
 				Repaint();
 			}
@@ -274,7 +308,7 @@ namespace Vertx
 				}
 				else if (t2d != null && t2d.alphaIsTransparency)
 				{
-					float imageAspect = t.width / (float)t.height;
+					float imageAspect = t.width / (float) t.height;
 					DrawTransparencyCheckerTexture(wantedRect, ScaleMode.StretchToFill, imageAspect);
 					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
@@ -342,7 +376,7 @@ namespace Vertx
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
 
-			if (continuousRepaint)
+			if (continuousRepaint || continuousRepaintOverride)
 				Repaint();
 		}
 
@@ -368,22 +402,6 @@ namespace Vertx
 			return new Vector2(Mathf.Clamp(m_PosLocal.x, -w2, w2), Mathf.Clamp(m_PosLocal.y, -h2, h2));
 		}
 
-		private float GetMipLevelForRendering()
-		{
-			if (target == null)
-				return 0.0f;
-
-			if (IsCubemap())
-			{
-				throw new NotImplementedException();
-				//This should never be called yet by this class, and is handled by the default editor.
-				//TODO support cubemap rendering here too
-//				return m_CubemapPreview.GetMipLevelForRendering(target as Texture);
-			}
-
-			return Mathf.Min(m_MipLevel, GetMipmapCount(target as Texture) - 1);
-		}
-
 		private static bool IsNormalMap(Texture t)
 		{
 			TextureUsageMode mode = GetUsageMode(t);
@@ -399,7 +417,7 @@ namespace Vertx
 		bool IsVolume()
 		{
 			var t = target as Texture;
-			return t != null && t.dimension == TextureDimension.Tex3D;
+			return t != null && (t.dimension == TextureDimension.Tex3D || t.dimension == TextureDimension.Tex2DArray);
 		}
 
 		private bool m_ShowAlpha;
@@ -409,6 +427,13 @@ namespace Vertx
 			if (IsCubemap())
 			{
 				//TODO perhaps support custom cubemap settings. Not currently!
+				defaultEditor.OnPreviewSettings();
+				return;
+			}
+			
+			if (IsVolume())
+			{
+				//TODO perhaps support 3D rendertexture settings. Not currently!
 				defaultEditor.OnPreviewSettings();
 				return;
 			}
@@ -444,9 +469,9 @@ namespace Vertx
 
 				TextureFormat format = 0;
 				bool checkFormat = false;
-				if (t is Texture2D)
+				if (t is Texture2D texture2D)
 				{
-					format = (t as Texture2D).format;
+					format = texture2D.format;
 					checkFormat = true;
 				}
 
@@ -460,8 +485,8 @@ namespace Vertx
 						if (mode == TextureUsageMode.Default) // all other texture usage modes don't displayable alpha
 							hasAlpha = true;
 					}
-					bool _hasR, _hasG, _hasB;
-					CheckRGBFormats(format, out _hasR, out _hasG, out _hasB);
+
+					CheckRGBFormats(format, out bool _hasR, out bool _hasG, out bool _hasB);
 					hasR = hasR || _hasR;
 					hasG = hasG || _hasG;
 					hasB = hasB || _hasB;
@@ -471,11 +496,10 @@ namespace Vertx
 
 				if (!checkFormat)
 				{
-					if (t is RenderTexture)
+					if (t is RenderTexture texture)
 					{
-						RenderTextureFormat renderTextureFormat = (t as RenderTexture).format;
-						bool _hasR, _hasG, _hasB;
-						CheckRGBFormats(renderTextureFormat, out _hasR, out _hasG, out _hasB);
+						RenderTextureFormat renderTextureFormat = texture.format;
+						CheckRGBFormats(renderTextureFormat, out bool _hasR, out bool _hasG, out bool _hasB);
 						hasR = hasR || _hasR;
 						hasG = hasG || _hasG;
 						hasB = hasB || _hasB;
@@ -497,7 +521,11 @@ namespace Vertx
 //				Selection.activeObject = previewShader;
 //			}
 
-			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
+			RenderTexture rT = tex as RenderTexture;
+			if (rT != null)
+				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
+
+			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
 				//Switch between the default % zoom, and 100% zoom
 				float p100 = 1 / zoomLevel;
@@ -549,8 +577,8 @@ namespace Vertx
 					m_MipLevel = Mathf.Round(GUILayout.HorizontalSlider(m_MipLevel, mipCount - 1, 0, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.MaxWidth(64)));
 					if (changeCheckScope.changed)
 					{
-						rGBAMaterial.SetFloat("_Mip", m_MipLevel);
-						rGBATransparentMaterial.SetFloat("_Mip", m_MipLevel);
+						rGBAMaterial.SetFloat(Mip, m_MipLevel);
+						rGBATransparentMaterial.SetFloat(Mip, m_MipLevel);
 						Repaint();
 					}
 				}
@@ -622,7 +650,7 @@ namespace Vertx
 					break;
 			}
 		}
-		
+
 		private static MethodInfo _DrawTransparencyCheckerTexture;
 
 		private static void DrawTransparencyCheckerTexture(Rect wantedRect, ScaleMode scaleMode, float imageAspect)
@@ -634,10 +662,7 @@ namespace Vertx
 
 		private static Type m_TextureUtilType;
 
-		private static Type TextureUtilType
-		{
-			get { return m_TextureUtilType ?? (m_TextureUtilType = Type.GetType("UnityEditor.TextureUtil, UnityEditor")); }
-		}
+		private static Type TextureUtilType => m_TextureUtilType ?? (m_TextureUtilType = Type.GetType("UnityEditor.TextureUtil, UnityEditor"));
 
 		private static MethodInfo m_IsAlphaOnlyTextureFormat;
 
@@ -686,10 +711,7 @@ namespace Vertx
 
 		private static Type m_PreviewGUIType;
 
-		private static Type PreviewGUIType
-		{
-			get { return m_PreviewGUIType ?? (m_PreviewGUIType = Type.GetType("PreviewGUI, UnityEditor")); }
-		}
+		private static Type PreviewGUIType => m_PreviewGUIType ?? (m_PreviewGUIType = Type.GetType("PreviewGUI, UnityEditor"));
 
 		private static MethodInfo m_PreviewGUIBeginScrollView;
 
@@ -732,6 +754,7 @@ namespace Vertx
 		}
 
 		private static MethodInfo m_GUICalculateScaledTextureRects;
+		private static readonly int Mip = Shader.PropertyToID("_Mip");
 
 		private static void GUICalculateScaledTextureRects(Rect position, ScaleMode scaleMode, float imageAspect, ref Rect outScreenRect, ref Rect outSourceRect)
 		{

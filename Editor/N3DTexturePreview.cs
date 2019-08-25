@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+
 #if !UNITY_2018_1_OR_NEWER
 using System.Linq;
 #endif
@@ -13,6 +14,13 @@ namespace Vertx
 	[CanEditMultipleObjects]
 	public class N3DTexturePreview : NTexturePreviewBase
 	{
+		private static readonly int R = Shader.PropertyToID("_R");
+		private static readonly int G = Shader.PropertyToID("_G");
+		private static readonly int B = Shader.PropertyToID("_B");
+		private static readonly int X = Shader.PropertyToID("_X");
+		private static readonly int Y = Shader.PropertyToID("_Y");
+		private static readonly int Z = Shader.PropertyToID("_Z");
+		
 		/// <summary>
 		/// An interface for overriding the Material used by this previewer
 		/// </summary>
@@ -23,6 +31,7 @@ namespace Vertx
 			/// </summary>
 			/// <returns>The Material used by the N3DTexturePreview if not null</returns>
 			Material GetMaterial(Texture3D texture3D);
+
 			bool ImplementAxisSliders();
 		}
 
@@ -40,7 +49,7 @@ namespace Vertx
 			#else
 			IEnumerable<Type> i3DMaterialOverrideTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(p => p != typeof(I3DMaterialOverride) && typeof(I3DMaterialOverride).IsAssignableFrom(p));
 			#endif
-			
+
 			foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
 			{
 				I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
@@ -52,9 +61,9 @@ namespace Vertx
 				}
 			}
 
-			rCallback = r => { material.SetFloat("_R", r ? 1 : 0); };
-			gCallback = g => { material.SetFloat("_G", g ? 1 : 0); };
-			bCallback = b => { material.SetFloat("_B", b ? 1 : 0); };
+			rCallback = r => { material.SetFloat(R, r ? 1 : 0); };
+			gCallback = g => { material.SetFloat(G, g ? 1 : 0); };
+			bCallback = b => { material.SetFloat(B, b ? 1 : 0); };
 			x = 1;
 			y = 1;
 			z = 1;
@@ -78,10 +87,7 @@ namespace Vertx
 			}
 		}
 
-		public override void OnInspectorGUI()
-		{
-			defaultEditor.OnInspectorGUI();
-		}
+		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
 
 		private float zoom = 3f;
 
@@ -89,10 +95,13 @@ namespace Vertx
 
 		enum Axis
 		{
-			X,Y,Z
+			X,
+			Y,
+			Z
 		}
+
 		private Axis axis = Axis.X;
-		
+
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
@@ -102,8 +111,7 @@ namespace Vertx
 			{
 				if (texture3D == null) // texture might have disappeared while we're showing this in a preview popup
 					continue;
-				bool _hasR, _hasG, _hasB;
-				NTexturePreview.CheckRGBFormats(texture3D.format, out _hasR, out _hasG, out _hasB);
+				NTexturePreview.CheckRGBFormats(texture3D.format, out bool _hasR, out bool _hasG, out bool _hasB);
 				hasR = hasR || _hasR;
 				hasB = hasB || _hasB;
 				hasG = hasG || _hasG;
@@ -141,7 +149,7 @@ namespace Vertx
 				}
 			}
 
-			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButton))
+			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
 				zoom = 3;
 				Repaint();
@@ -150,16 +158,13 @@ namespace Vertx
 			DrawRGBToggles(hasR, hasB, hasG);
 		}
 
-		public virtual bool ImplementAxisSliders()
-		{
-			return true;
-		}
+		public virtual bool ImplementAxisSliders() => true;
 
 		void SetXYZFloats()
 		{
-			material.SetFloat("_X", x);
-			material.SetFloat("_Y", y);
-			material.SetFloat("_Z", z);
+			material.SetFloat(X, x);
+			material.SetFloat(Y, y);
+			material.SetFloat(Z, z);
 			Repaint();
 		}
 
@@ -197,11 +202,12 @@ namespace Vertx
 			bool oldFog = RenderSettings.fog;
 			Unsupported.SetRenderSettingsUseFogNoDirty(false);
 
-			m_PreviewUtility.camera.transform.position = -Vector3.forward * zoom;
+			var cameraTransform = m_PreviewUtility.camera.transform;
+			cameraTransform.position = -Vector3.forward * zoom;
 
-			m_PreviewUtility.camera.transform.rotation = Quaternion.identity;
+			cameraTransform.rotation = Quaternion.identity;
 			Quaternion rot = Quaternion.Euler(m_PreviewDir.y, 0, 0) * Quaternion.Euler(0, m_PreviewDir.x, 0);
-			m_PreviewUtility.DrawMesh(mesh, Vector3.zero, rot, material, 0);
+			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, material, 0);
 			m_PreviewUtility.Render();
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
@@ -211,11 +217,10 @@ namespace Vertx
 
 		void InitPreview()
 		{
-			if (m_PreviewUtility == null)
-			{
-				m_PreviewUtility = new PreviewRenderUtility();
-				m_PreviewUtility.camera.fieldOfView = 30.0f;
-			}
+			if (m_PreviewUtility != null)
+				return;
+			m_PreviewUtility = new PreviewRenderUtility();
+			m_PreviewUtility.camera.fieldOfView = 30.0f;
 		}
 
 		private I3DMaterialOverride materialOverride;
@@ -229,6 +234,7 @@ namespace Vertx
 				return m_Material;
 			}
 		}
+
 		private Material m_Material;
 
 		#region PreviewGUI
@@ -259,7 +265,7 @@ namespace Vertx
 				case EventType.MouseDrag:
 					if (GUIUtility.hotControl == controlId)
 					{
-						scrollPosition -= current.delta * (!current.shift ? 1f : 3f) / Mathf.Min(position.width, position.height) * 140f;
+						scrollPosition -= 140f * (!current.shift ? 1f : 3f) / Mathf.Min(position.width, position.height) * current.delta;
 						scrollPosition.y = Mathf.Clamp(scrollPosition.y, -90f, 90f);
 						current.Use();
 						GUI.changed = true;
@@ -273,15 +279,14 @@ namespace Vertx
 
 		#endregion
 
-		private Mesh _mesh;
-
-		protected Mesh mesh
+		private Mesh mesh;
+		protected Mesh Mesh
 		{
 			get
 			{
-				if (_mesh == null)
-					_mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-				return _mesh;
+				if (mesh == null)
+					mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+				return mesh;
 			}
 		}
 

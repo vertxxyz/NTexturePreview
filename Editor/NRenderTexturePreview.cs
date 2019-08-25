@@ -26,9 +26,6 @@ namespace Vertx
 			DestroyImmediate(defaultEditor);
 		}
 
-		public override void OnInspectorGUI()
-		{
-			defaultEditor.OnInspectorGUI();
-		}
+		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
 	}
 }
