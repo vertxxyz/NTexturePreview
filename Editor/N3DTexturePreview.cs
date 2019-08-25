@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 #if !UNITY_2018_1_OR_NEWER
 using System.Linq;
@@ -88,6 +89,8 @@ namespace Vertx
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
+
+		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 
 		private float zoom = 3f;
 

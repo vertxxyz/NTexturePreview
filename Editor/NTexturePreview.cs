@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace Vertx
 {
@@ -102,6 +103,8 @@ namespace Vertx
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
+
+		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 
 		public override bool HasPreviewGUI() => target != null;
 
