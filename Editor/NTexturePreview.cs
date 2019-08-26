@@ -141,13 +141,16 @@ namespace Vertx
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
+			bool isVolume = IsVolume();
+			
 			// Render target must be created before we can display it (case 491797)
 			RenderTexture rt = t as RenderTexture;
 			if (rt != null)
 			{
 				if (!SystemInfo.SupportsRenderTextureFormat(rt.format))
 					return; // can't do this RT format
-				rt.Create();
+				if(!isVolume)
+					rt.Create();
 			}
 
 			if (IsCubemap())
@@ -157,7 +160,7 @@ namespace Vertx
 				return;
 			}
 
-			if (IsVolume())
+			if (isVolume)
 			{
 				//TODO perhaps support 3D rendertexture settings. Not currently!
 				defaultEditor.OnPreviewGUI(r, background);
