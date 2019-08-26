@@ -9,6 +9,30 @@ namespace Vertx
 	{
 		protected virtual void OnDisable() => SetRGBTo(true, true, true);
 
+		#region Assets
+		protected Material m_Material3D;
+		protected Material material3D
+		{
+			get
+			{
+				if (m_Material3D == null)
+					m_Material3D = new Material(Resources.Load<Shader>("RGB3DShader"));
+				return m_Material3D;
+			}
+		}
+
+		private Mesh mesh;
+		protected Mesh Mesh
+		{
+			get
+			{
+				if (mesh == null)
+					mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+				return mesh;
+			}
+		}
+		#endregion
+
 		protected enum TextureUsageMode
 		{
 			Default = 0,

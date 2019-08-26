@@ -100,6 +100,8 @@ namespace Vertx
 			if (disableMethod != null)
 				disableMethod.Invoke(defaultEditor, null);
 			DestroyImmediate(defaultEditor);
+			if(_editor3D != null)
+				DestroyImmediate(_editor3D);
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -116,6 +118,8 @@ namespace Vertx
 
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
+		
+		protected const string noSupportFor3DWithDepth = "3D textures with depth are not supported!";
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
@@ -138,16 +142,23 @@ namespace Vertx
 		
 		//Render texture repaint (play)
 		private bool continuousRepaintOverride;
+		
+		//3D RenderTexture Support
+		private N3DTexturePreview _editor3D;
+		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) Editor.CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
+			bool isVolume = IsVolume();
+			
 			// Render target must be created before we can display it (case 491797)
 			RenderTexture rt = t as RenderTexture;
 			if (rt != null)
 			{
 				if (!SystemInfo.SupportsRenderTextureFormat(rt.format))
 					return; // can't do this RT format
-				rt.Create();
+				if(!isVolume)
+					rt.Create();
 			}
 
 			if (IsCubemap())
@@ -157,10 +168,20 @@ namespace Vertx
 				return;
 			}
 
-			if (IsVolume())
+			if (isVolume)
 			{
+				if (rt != null && rt.depth != 0)
+				{
+					float h = r.height / 2f;
+					h -= 15;
+					float y = r.y + h;
+					h = 30;
+					EditorGUI.HelpBox(new Rect(r.x, y, r.width, h), noSupportFor3DWithDepth, MessageType.Error);
+					return;
+				}
+				
 				//TODO perhaps support 3D rendertexture settings. Not currently!
-				defaultEditor.OnPreviewGUI(r, background);
+				editor3D.OnPreviewGUI(r, background);
 				return;
 			}
 
@@ -417,7 +438,7 @@ namespace Vertx
 			return t != null && t.dimension == TextureDimension.Cube;
 		}
 
-		bool IsVolume()
+		protected bool IsVolume()
 		{
 			var t = target as Texture;
 			return t != null && (t.dimension == TextureDimension.Tex3D || t.dimension == TextureDimension.Tex2DArray);
@@ -434,10 +455,10 @@ namespace Vertx
 				return;
 			}
 			
-			if (IsVolume())
+			RenderTexture rT = target as RenderTexture;
+			if (rT != null && IsVolume())
 			{
-				//TODO perhaps support 3D rendertexture settings. Not currently!
-				defaultEditor.OnPreviewSettings();
+				editor3D.PreviewSettings();
 				return;
 			}
 
@@ -499,9 +520,9 @@ namespace Vertx
 
 				if (!checkFormat)
 				{
-					if (t is RenderTexture texture)
+					if (rT != null)
 					{
-						RenderTextureFormat renderTextureFormat = texture.format;
+						RenderTextureFormat renderTextureFormat = rT.format;
 						CheckRGBFormats(renderTextureFormat, out bool _hasR, out bool _hasG, out bool _hasB);
 						hasR = hasR || _hasR;
 						hasG = hasG || _hasG;
@@ -524,7 +545,6 @@ namespace Vertx
 //				Selection.activeObject = previewShader;
 //			}
 
-			RenderTexture rT = tex as RenderTexture;
 			if (rT != null)
 				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
 
@@ -624,7 +644,7 @@ namespace Vertx
 			}
 		}
 
-		private static void CheckRGBFormats(RenderTextureFormat renderTextureFormat, out bool hasR, out bool hasG, out bool hasB)
+		public static void CheckRGBFormats(RenderTextureFormat renderTextureFormat, out bool hasR, out bool hasG, out bool hasB)
 		{
 			hasR = true;
 			hasG = true;
