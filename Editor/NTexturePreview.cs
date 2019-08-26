@@ -438,7 +438,7 @@ namespace Vertx
 			return t != null && t.dimension == TextureDimension.Cube;
 		}
 
-		bool IsVolume()
+		protected bool IsVolume()
 		{
 			var t = target as Texture;
 			return t != null && (t.dimension == TextureDimension.Tex3D || t.dimension == TextureDimension.Tex2DArray);
