@@ -5,10 +5,6 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-#if !UNITY_2018_1_OR_NEWER
-using System.Linq;
-#endif
-
 namespace Vertx
 {
 	[CustomEditor(typeof(Texture3D))]
@@ -42,29 +38,29 @@ namespace Vertx
 			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.Texture3DInspector, UnityEditor"));
 
 			//Find all types of I3DMaterialOverride, and query whether there's a valid material for the current target.
-
-			#if UNITY_2018_1_OR_NEWER
 			IEnumerable<Type> i3DMaterialOverrideTypes = (IEnumerable<Type>) Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
 				"GetAllTypesWithInterface", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(Type)}, null
 			).Invoke(null, new object[] {typeof(I3DMaterialOverride)});
-			#else
-			IEnumerable<Type> i3DMaterialOverrideTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(p => p != typeof(I3DMaterialOverride) && typeof(I3DMaterialOverride).IsAssignableFrom(p));
-			#endif
 
-			foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
+			//Safe cast to allow Render Texture 3D to fall-back to this class.
+			Texture3D texture3D = target as Texture3D;
+			if (texture3D != null)
 			{
-				I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
-				m_Material = i3DMaterialOverride.GetMaterial((Texture3D) target);
-				if (m_Material != null)
+				foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
 				{
-					materialOverride = i3DMaterialOverride;
-					break;
+					I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
+					m_Material3D = i3DMaterialOverride.GetMaterial(texture3D);
+					if (m_Material3D != null)
+					{
+						materialOverride = i3DMaterialOverride;
+						break;
+					}
 				}
 			}
 
-			rCallback = r => { material.SetFloat(R, r ? 1 : 0); };
-			gCallback = g => { material.SetFloat(G, g ? 1 : 0); };
-			bCallback = b => { material.SetFloat(B, b ? 1 : 0); };
+			rCallback = r => { material3D.SetFloat(R, r ? 1 : 0); };
+			gCallback = g => { material3D.SetFloat(G, g ? 1 : 0); };
+			bCallback = b => { material3D.SetFloat(B, b ? 1 : 0); };
 			x = 1;
 			y = 1;
 			z = 1;
@@ -108,13 +104,29 @@ namespace Vertx
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
+			PreviewSettings();
+		}
+
+		public void PreviewSettings()
+		{
 			bool hasR = false, hasG = false, hasB = false;
 			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
-			foreach (Texture3D texture3D in targets)
+			foreach (Object texture in targets)
 			{
-				if (texture3D == null) // texture might have disappeared while we're showing this in a preview popup
-					continue;
-				NTexturePreview.CheckRGBFormats(texture3D.format, out bool _hasR, out bool _hasG, out bool _hasB);
+				bool _hasR, _hasG, _hasB;
+				switch (texture)
+				{
+					case Texture3D texture3D:
+						NTexturePreview.CheckRGBFormats(texture3D.format, out _hasR, out _hasG, out _hasB);
+						break;
+					case RenderTexture renderTexture:
+						NTexturePreview.CheckRGBFormats(renderTexture.format, out _hasR, out _hasG, out _hasB);
+						break;
+					default:
+						continue;
+				}
+				
+				
 				hasR = hasR || _hasR;
 				hasB = hasB || _hasB;
 				hasG = hasG || _hasG;
@@ -122,33 +134,47 @@ namespace Vertx
 
 			if (ImplementAxisSliders() && (materialOverride == null || materialOverride.ImplementAxisSliders()))
 			{
-				Texture3D defaultTex3D = target as Texture3D;
-				if (defaultTex3D != null)
+				int width, height, depth;
+				
+				switch (target)
 				{
-					using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+					case Texture3D texture3D:
+						width = texture3D.width;
+						height = texture3D.height;
+						depth = texture3D.depth;
+						break;
+					case RenderTexture renderTexture:
+						width = renderTexture.width;
+						height = renderTexture.height;
+						depth = renderTexture.depth;
+						break; 
+					default:
+						return;
+				}
+				
+				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
+				{
+					Vector3 size = new Vector3(width, height, depth);
+					Vector3 sizeCurrent = new Vector3(x * (size.x - 1) + 1, y * (size.y - 1) + 1, z * (size.z - 1) + 1);
+					axis = (Axis) EditorGUILayout.EnumPopup(axis, s_Styles.previewDropDown, GUILayout.Width(25));
+					switch (axis)
 					{
-						Vector3 size = new Vector3(defaultTex3D.width, defaultTex3D.height, defaultTex3D.depth);
-						Vector3 sizeCurrent = new Vector3(x * (size.x - 1) + 1, y * (size.y - 1) + 1, z * (size.z - 1) + 1);
-						axis = (Axis) EditorGUILayout.EnumPopup(axis, s_Styles.previewDropDown, GUILayout.Width(25));
-						switch (axis)
-						{
-							case Axis.X:
-								x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.x - 1);
-								EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
-								break;
-							case Axis.Y:
-								y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.y - 1);
-								EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
-								break;
-							case Axis.Z:
-								z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.z - 1);
-								EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
-								break;
-						}
-
-						if (changeCheckScope.changed)
-							SetXYZFloats();
+						case Axis.X:
+							x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.x - 1);
+							EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							break;
+						case Axis.Y:
+							y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.y - 1);
+							EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							break;
+						case Axis.Z:
+							z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.z - 1);
+							EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							break;
 					}
+
+					if (changeCheckScope.changed)
+						SetXYZFloats();
 				}
 			}
 
@@ -165,9 +191,9 @@ namespace Vertx
 
 		void SetXYZFloats()
 		{
-			material.SetFloat(X, x);
-			material.SetFloat(Y, y);
-			material.SetFloat(Z, z);
+			material3D.SetFloat(X, x);
+			material3D.SetFloat(Y, y);
+			material3D.SetFloat(Z, z);
 			Repaint();
 		}
 
@@ -199,7 +225,7 @@ namespace Vertx
 				return;
 
 			InitPreview();
-			material.mainTexture = target as Texture;
+			material3D.mainTexture = target as Texture;
 
 			m_PreviewUtility.BeginPreview(r, background);
 			bool oldFog = RenderSettings.fog;
@@ -210,7 +236,7 @@ namespace Vertx
 
 			cameraTransform.rotation = Quaternion.identity;
 			Quaternion rot = Quaternion.Euler(m_PreviewDir.y, 0, 0) * Quaternion.Euler(0, m_PreviewDir.x, 0);
-			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, material, 0);
+			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, material3D, 0);
 			m_PreviewUtility.Render();
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
@@ -227,18 +253,6 @@ namespace Vertx
 		}
 
 		private I3DMaterialOverride materialOverride;
-
-		private Material material
-		{
-			get
-			{
-				if (m_Material == null)
-					m_Material = new Material(Resources.Load<Shader>("RGB3DShader"));
-				return m_Material;
-			}
-		}
-
-		private Material m_Material;
 
 		#region PreviewGUI
 
@@ -282,20 +296,6 @@ namespace Vertx
 
 		#endregion
 
-		private Mesh mesh;
-		protected Mesh Mesh
-		{
-			get
-			{
-				if (mesh == null)
-					mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-				return mesh;
-			}
-		}
-
-		public override bool HasPreviewGUI()
-		{
-			return defaultEditor.HasPreviewGUI();
-		}
+		public override bool HasPreviewGUI() => defaultEditor.HasPreviewGUI();
 	}
 }

@@ -100,6 +100,8 @@ namespace Vertx
 			if (disableMethod != null)
 				disableMethod.Invoke(defaultEditor, null);
 			DestroyImmediate(defaultEditor);
+			if(_editor3D != null)
+				DestroyImmediate(_editor3D);
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -140,6 +142,10 @@ namespace Vertx
 		
 		//Render texture repaint (play)
 		private bool continuousRepaintOverride;
+		
+		//3D RenderTexture Support
+		private N3DTexturePreview _editor3D;
+		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) Editor.CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
@@ -164,7 +170,7 @@ namespace Vertx
 
 			if (isVolume)
 			{
-				if (rt.depth != 0)
+				if (rt != null && rt.depth != 0)
 				{
 					float h = r.height / 2f;
 					h -= 15;
@@ -175,7 +181,7 @@ namespace Vertx
 				}
 				
 				//TODO perhaps support 3D rendertexture settings. Not currently!
-				defaultEditor.OnPreviewGUI(r, background);
+				editor3D.OnPreviewGUI(r, background);
 				return;
 			}
 
@@ -449,10 +455,10 @@ namespace Vertx
 				return;
 			}
 			
-			if (IsVolume())
+			RenderTexture rT = target as RenderTexture;
+			if (rT != null && IsVolume())
 			{
-				//TODO perhaps support 3D rendertexture settings. Not currently!
-				defaultEditor.OnPreviewSettings();
+				editor3D.PreviewSettings();
 				return;
 			}
 
@@ -514,9 +520,9 @@ namespace Vertx
 
 				if (!checkFormat)
 				{
-					if (t is RenderTexture texture)
+					if (rT != null)
 					{
-						RenderTextureFormat renderTextureFormat = texture.format;
+						RenderTextureFormat renderTextureFormat = rT.format;
 						CheckRGBFormats(renderTextureFormat, out bool _hasR, out bool _hasG, out bool _hasB);
 						hasR = hasR || _hasR;
 						hasG = hasG || _hasG;
@@ -539,7 +545,6 @@ namespace Vertx
 //				Selection.activeObject = previewShader;
 //			}
 
-			RenderTexture rT = tex as RenderTexture;
 			if (rT != null)
 				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
 
@@ -639,7 +644,7 @@ namespace Vertx
 			}
 		}
 
-		private static void CheckRGBFormats(RenderTextureFormat renderTextureFormat, out bool hasR, out bool hasG, out bool hasB)
+		public static void CheckRGBFormats(RenderTextureFormat renderTextureFormat, out bool hasR, out bool hasG, out bool hasB)
 		{
 			hasR = true;
 			hasG = true;
