@@ -146,7 +146,7 @@ namespace Vertx
 					case RenderTexture renderTexture:
 						width = renderTexture.width;
 						height = renderTexture.height;
-						depth = renderTexture.depth;
+						depth = renderTexture.volumeDepth;
 						break; 
 					default:
 						return;
