@@ -27,7 +27,15 @@ namespace Vertx
 			DestroyImmediate(defaultEditor);
 		}
 
-		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
+		public override void OnInspectorGUI()
+		{
+			defaultEditor.OnInspectorGUI();
+			RenderTexture rt = target as RenderTexture;
+			if (rt != null && rt.depth != 0)
+			{
+				EditorGUILayout.HelpBox(noSupportFor3DWithDepth, MessageType.Error);
+			}
+		}
 
 		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 	}

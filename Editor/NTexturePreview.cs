@@ -116,6 +116,8 @@ namespace Vertx
 
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
+		
+		protected const string noSupportFor3DWithDepth = "3D textures with depth are not supported!";
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
@@ -162,6 +164,16 @@ namespace Vertx
 
 			if (isVolume)
 			{
+				if (rt.depth != 0)
+				{
+					float h = r.height / 2f;
+					h -= 15;
+					float y = r.y + h;
+					h = 30;
+					EditorGUI.HelpBox(new Rect(r.x, y, r.width, h), noSupportFor3DWithDepth, MessageType.Error);
+					return;
+				}
+				
 				//TODO perhaps support 3D rendertexture settings. Not currently!
 				defaultEditor.OnPreviewGUI(r, background);
 				return;
