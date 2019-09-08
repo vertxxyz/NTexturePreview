@@ -67,6 +67,58 @@ namespace Vertx
 
 		protected static Material normalsMaterial => _normalsMaterial == null ? _normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader")) : _normalsMaterial;
 
+		private static Texture2D _lightCursor;
+
+		protected static Texture2D LightCursor => _lightCursor == null ? _lightCursor = Resources.Load<Texture2D>("LightCursor") : _lightCursor;
+
+		private static Texture2D _pickerCursor;
+
+		protected static Texture2D PickerCursor => _pickerCursor == null ? _pickerCursor = Resources.Load<Texture2D>("PickerCursor") : _pickerCursor;
+
+		private static GUIStyle _pickerLabelStyle;
+
+		protected static GUIStyle PickerLabelStyle =>
+			_pickerLabelStyle ?? (_pickerLabelStyle = new GUIStyle("PreOverlayLabel")
+			{
+				alignment = TextAnchor.MiddleLeft
+			});
+		
+		private static Texture2D _sampleTexture;
+		private static Texture2D _sampleTextureKey;
+
+		public Texture2D GetSampleTextureFor(Texture2D source)
+		{
+			if (_sampleTextureKey == source && _sampleTexture != null)
+				return _sampleTexture;
+			if(_sampleTextureKey == null && _sampleTexture != null)
+				DestroyImmediate(_sampleTexture);
+			// Create a temporary RenderTexture of the same size as the texture
+			RenderTexture tmp = RenderTexture.GetTemporary(
+				source.width,
+				source.height,
+				0,
+				RenderTextureFormat.ARGBFloat,
+				RenderTextureReadWrite.Linear);
+
+			// Blit the pixels on texture to the RenderTexture
+			Graphics.Blit(source, tmp);
+			// Backup the currently set RenderTexture
+			RenderTexture previous = RenderTexture.active;
+			// Set the current RenderTexture to the temporary one we created
+			RenderTexture.active = tmp;
+			// Create a new readable Texture2D to copy the pixels to it
+			_sampleTexture = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false, true);
+			// Copy the pixels from the RenderTexture to the new Texture
+			_sampleTexture.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+			_sampleTexture.Apply();
+			// Reset the active RenderTexture
+			RenderTexture.active = previous;
+			// Release the temporary RenderTexture
+			RenderTexture.ReleaseTemporary(tmp);
+			_sampleTextureKey = source;
+			return _sampleTexture;
+		}
+
 		protected override void OnDisable()
 		{
 			base.OnDisable();
@@ -75,8 +127,11 @@ namespace Vertx
 			if (defaultEditor != null)
 				DestroyImmediate(defaultEditor);
 
-			if(_editor3D != null)
+			if (_editor3D != null)
 				DestroyImmediate(_editor3D);
+			
+			if(_sampleTexture != null)
+				DestroyImmediate(_sampleTexture);
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -93,7 +148,7 @@ namespace Vertx
 
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
-		
+
 		protected const string noSupportFor3DWithDepth = "3D textures with depth are not supported!";
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
@@ -114,25 +169,28 @@ namespace Vertx
 		//Variables for normal map diffuse preview.
 		private bool continuousRepaint;
 		private float lightZ = 0.1f;
-		
+
 		//Render texture repaint (play)
 		private bool continuousRepaintOverride;
-		
+
 		//3D RenderTexture Support
 		private N3DTexturePreview _editor3D;
 		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
 
+		//Colour sampling
+		private bool samplingColour;
+
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			bool isVolume = IsVolume();
-			
+
 			// Render target must be created before we can display it (case 491797)
 			RenderTexture rt = t as RenderTexture;
 			if (rt != null)
 			{
 				if (!SystemInfo.SupportsRenderTextureFormat(rt.format))
 					return; // can't do this RT format
-				if(!isVolume)
+				if (!isVolume)
 					rt.Create();
 			}
 
@@ -154,7 +212,7 @@ namespace Vertx
 					EditorGUI.HelpBox(new Rect(r.x, y, r.width, h), noSupportFor3DWithDepth, MessageType.Error);
 					return;
 				}
-				
+
 				//TODO perhaps support 3D rendertexture settings. Not currently!
 				editor3D.OnPreviewGUI(r, background);
 				return;
@@ -174,7 +232,7 @@ namespace Vertx
 			int texHeight = Mathf.Max(t.height, 1);
 
 			float mipLevel = GetMipLevelForRendering();
-			
+
 			float GetMipLevelForRendering()
 			{
 				if (target == null)
@@ -190,7 +248,7 @@ namespace Vertx
 
 				return Mathf.Min(m_MipLevel, GetMipmapCount(target as Texture) - 1);
 			}
-			
+
 			zoomLevel = Mathf.Min(Mathf.Min(r.width / texWidth, r.height / texHeight), 1);
 			Rect wantedRect = new Rect(r.x, r.y, texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
 
@@ -208,6 +266,7 @@ namespace Vertx
 						case EventType.MouseDown:
 							normalsMaterial.EnableKeyword("PREVIEW_DIFFUSE");
 							normalsMaterial.DisableKeyword("PREVIEW_NORMAL");
+							Cursor.SetCursor(LightCursor, new Vector2(16, 16), CursorMode.Auto);
 							continuousRepaint = true;
 							break;
 						case EventType.MouseUp:
@@ -218,10 +277,7 @@ namespace Vertx
 					}
 
 					if (e.type != EventType.Repaint)
-					{
 						e.Use();
-						Repaint();
-					}
 				}
 
 				if (continuousRepaint)
@@ -231,7 +287,29 @@ namespace Vertx
 					pos += m_Pos;
 					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
 					normalsMaterial.SetFloat(LightX, pos.x / wantedRect.size.x);
-					normalsMaterial.SetFloat(LightY, 1 - (pos.y / wantedRect.size.y));
+					normalsMaterial.SetFloat(LightY, 1 - pos.y / wantedRect.size.y);
+					EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
+				}
+			}
+			else
+			{
+				if (e.button == 1)
+				{
+					switch (e.type)
+					{
+						case EventType.MouseDown:
+							samplingColour = true;
+							continuousRepaintOverride = true;
+							Cursor.SetCursor(PickerCursor, new Vector2(15, 15), CursorMode.Auto);
+							break;
+						case EventType.MouseUp:
+							samplingColour = false;
+							continuousRepaintOverride = false;
+							break;
+					}
+
+					if (e.type != EventType.Repaint)
+						e.Use();
 				}
 			}
 
@@ -253,6 +331,7 @@ namespace Vertx
 
 			if (!hasDragged && e.type == EventType.MouseUp && e.button == 2)
 			{
+				//Middle mouse button click re-centering
 				animatedPos.value = m_Pos;
 				Vector2 tgt = ClampPos(m_Pos + ConvertPositionToLocalTextureRect(r, e.mousePosition), r, texWidth, texHeight, zoomLevel);
 				animatedPos.target = tgt;
@@ -289,6 +368,7 @@ namespace Vertx
 			}
 
 
+			Texture2D t2d = t as Texture2D;
 			{
 				//SCROLL VIEW -----------------------------------------------------------------------------
 				PreviewGUIUtility.BeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
@@ -296,7 +376,6 @@ namespace Vertx
 //				FilterMode oldFilter = t.filterMode;
 //				SetFilterModeNoDirty(t, FilterMode.Point);
 
-				Texture2D t2d = t as Texture2D;
 				if (m_ShowAlpha)
 				{
 					#if UNITY_2018_1_OR_NEWER
@@ -371,10 +450,52 @@ namespace Vertx
 				m_Pos = PreviewGUIUtility.EndScrollView();
 			} //-----------------------------------------------------------------------------------------
 
+			if (samplingColour && t2d != null)
+			{
+				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
+				Vector2 mousePosition = Event.current.mousePosition;
+				
+				Vector2 pos = Event.current.mousePosition - r.position;
+				pos -= r.size / 2f;
+				pos += m_Pos;
+				pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
+				pos /= wantedRect.size;
+				pos.y = 1 - pos.y;
+				pos.x *= texWidth;
+				pos.y *= texHeight;
+				
+				int x = Mathf.Clamp(Mathf.RoundToInt(pos.x), 0, texWidth - 1);
+				int y = Mathf.Clamp(Mathf.RoundToInt(pos.y), 0, texHeight - 1);
+
+				Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
+				Color pixel = sampleTexture.GetPixel(x, y, 0);
+				
+				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
+				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
+				Rect labelRect;
+				if (mousePosition.x > r.width - labelSize.x)
+				{
+					labelRect = new Rect(mousePosition.x - labelSize.x - 5, mousePosition.y + 5, labelSize.x, 16);
+					PickerLabelStyle.alignment = TextAnchor.MiddleRight;
+				}
+				else
+				{
+					labelRect = new Rect(mousePosition.x + 5, mousePosition.y + 5, labelSize.x, 16);
+					PickerLabelStyle.alignment = TextAnchor.MiddleLeft;
+				}
+				EditorGUI.DrawRect(labelRect, new Color(0f, 0f, 0f, 0.2f));
+				EditorGUI.LabelField(labelRect, label, PickerLabelStyle);
+
+				pixel.a = 1;
+				EditorGUI.DrawRect(new Rect(mousePosition.x - 57, mousePosition.y - 57, 52, 52), Color.black);
+				EditorGUI.DrawRect(new Rect(mousePosition.x - 56, mousePosition.y - 56, 50, 50), pixel);
+			}
+
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
 
+			//This approach is much smoother than using RequiresConstantRepaint
 			if (continuousRepaint || continuousRepaintOverride)
 				Repaint();
 		}
@@ -429,7 +550,7 @@ namespace Vertx
 				defaultEditor.OnPreviewSettings();
 				return;
 			}
-			
+
 			RenderTexture rT = target as RenderTexture;
 			if (rT != null && IsVolume())
 			{
