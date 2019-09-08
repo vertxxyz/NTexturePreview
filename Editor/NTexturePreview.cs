@@ -57,49 +57,24 @@ namespace Vertx
 
 		private static Material _rGBAMaterial;
 
-		protected static Material rGBAMaterial
-		{
-			get
-			{
-				if (_rGBAMaterial == null)
-					_rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader"));
-				return _rGBAMaterial;
-			}
-		}
+		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader")) : _rGBAMaterial;
 
 		private static Material _rGBATransparentMaterial;
 
-		protected static Material rGBATransparentMaterial
-		{
-			get
-			{
-				if (_rGBATransparentMaterial == null)
-					_rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader"));
-				return _rGBATransparentMaterial;
-			}
-		}
+		protected static Material rGBATransparentMaterial => _rGBATransparentMaterial == null ? _rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader")) : _rGBATransparentMaterial;
 
 		private static Material _normalsMaterial;
 
-		protected static Material normalsMaterial
-		{
-			get
-			{
-				if (_normalsMaterial == null)
-					_normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader"));
-				return _normalsMaterial;
-			}
-		}
+		protected static Material normalsMaterial => _normalsMaterial == null ? _normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader")) : _normalsMaterial;
 
 		protected override void OnDisable()
 		{
 			base.OnDisable();
 			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.
 			//Also, make sure to call any required methods like OnDisable
-			MethodInfo disableMethod = defaultEditor.GetType().GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-			if (disableMethod != null)
-				disableMethod.Invoke(defaultEditor, null);
-			DestroyImmediate(defaultEditor);
+			if (defaultEditor != null)
+				DestroyImmediate(defaultEditor);
+
 			if(_editor3D != null)
 				DestroyImmediate(_editor3D);
 		}
@@ -145,7 +120,7 @@ namespace Vertx
 		
 		//3D RenderTexture Support
 		private N3DTexturePreview _editor3D;
-		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) Editor.CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
+		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
@@ -316,10 +291,10 @@ namespace Vertx
 
 			{
 				//SCROLL VIEW -----------------------------------------------------------------------------
-				PreviewGUIBeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
+				PreviewGUIUtility.BeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
 
-//            FilterMode oldFilter = t.filterMode;
-//            SetFilterModeNoDirty(t, FilterMode.Point);
+//				FilterMode oldFilter = t.filterMode;
+//				SetFilterModeNoDirty(t, FilterMode.Point);
 
 				Texture2D t2d = t as Texture2D;
 				if (m_ShowAlpha)
@@ -393,7 +368,7 @@ namespace Vertx
 
 				//SetFilterModeNoDirty(t, oldFilter);
 
-				m_Pos = PreviewGUIEndScrollView();
+				m_Pos = PreviewGUIUtility.EndScrollView();
 			} //-----------------------------------------------------------------------------------------
 
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
@@ -732,7 +707,7 @@ namespace Vertx
 			m_SetFilterModeNoDirty.Invoke(null, new object[] {texture, mode});
 		}
 
-		private static Type m_PreviewGUIType;
+		/*private static Type m_PreviewGUIType;
 
 		private static Type PreviewGUIType => m_PreviewGUIType ?? (m_PreviewGUIType = Type.GetType("PreviewGUI, UnityEditor"));
 
@@ -753,7 +728,7 @@ namespace Vertx
 			if (m_PreviewGUIEndScrollView == null)
 				m_PreviewGUIEndScrollView = PreviewGUIType.GetMethod("EndScrollView", BindingFlags.Public | BindingFlags.Static);
 			return (Vector2) m_PreviewGUIEndScrollView.Invoke(null, null);
-		}
+		}*/
 
 		private static MethodInfo m_ApplyWireMaterial;
 
