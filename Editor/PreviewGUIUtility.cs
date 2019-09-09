@@ -14,11 +14,11 @@ namespace Vertx
 		private static Type guiClipType;
 		public static Type GUIClipType => guiClipType ?? (guiClipType = Type.GetType("UnityEngine.GUIClip,UnityEngine"));
 		private static MethodInfo popMI;
-		public static MethodInfo PopMI => popMI ?? GUIClipType.GetMethod("Pop", BindingFlags.Static | BindingFlags.NonPublic);
+		public static MethodInfo PopMI => popMI ?? (popMI = GUIClipType.GetMethod("Pop", BindingFlags.Static | BindingFlags.NonPublic));
 		public static void Pop() => PopMI.Invoke(null, null);
 
 		private static MethodInfo pushMI;
-		public static MethodInfo PushMI => pushMI ?? GUIClipType.GetMethod("Push", BindingFlags.Static | BindingFlags.NonPublic);
+		public static MethodInfo PushMI => pushMI ?? (pushMI = GUIClipType.GetMethod("Push", BindingFlags.Static | BindingFlags.NonPublic));
 
 		private static readonly object[] pushArray = new object[4];
 
