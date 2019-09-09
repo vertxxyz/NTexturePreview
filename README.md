@@ -36,4 +36,4 @@ Ensure your project is on .NET 4.x by navigating to Edit>Project Settings>Player
 
 Pull the project locally and use the Package Manager (Window>Package Manager), adding the package.json file present in the root of the folder with the `+` button.
 
-Or edit your Package.json file to contain `"com.vertx.ntexturepreview": "https://github.com/vertxxyz/NTexturePreview.git",`
+Or edit your `manifest.json` file to contain `"com.vertx.ntexturepreview": "https://github.com/vertxxyz/NTexturePreview.git",`

@@ -92,8 +92,8 @@ namespace Vertx
 		protected static GUIStyle NotificationTextStyle => _notificationTextStyle ?? (_notificationTextStyle = new GUIStyle("NotificationText"));
 		protected static GUIStyle NotificationBackgroundStyle => _notificationBackgroundStyle ?? (_notificationBackgroundStyle = new GUIStyle("NotificationBackground"));
 
-		private GUIContent copiedHexContent = new GUIContent("Copied Hex Value");
-		private GUIContent copiedCodeContent = new GUIContent("Copied Code-Ready Colour Value");
+		private readonly GUIContent copiedHexContent = new GUIContent("Copied Hex Value");
+		private readonly GUIContent copiedCodeContent = new GUIContent("Copied Code-Ready Colour Value");
 		private GUIContent activeNotificationContent;
 		private double notificationEndTime;
 		private double notificationFadeoutTime;
