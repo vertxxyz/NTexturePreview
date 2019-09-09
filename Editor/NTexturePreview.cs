@@ -17,7 +17,7 @@ namespace Vertx
 		private static readonly int R = Shader.PropertyToID("_R");
 		private static readonly int G = Shader.PropertyToID("_G");
 		private static readonly int B = Shader.PropertyToID("_B");
-
+		
 		protected void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
@@ -454,21 +454,7 @@ namespace Vertx
 			{
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
-				
-				Vector2 pos = Event.current.mousePosition - r.position;
-				pos -= r.size / 2f;
-				pos += m_Pos;
-				pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
-				pos /= wantedRect.size;
-				pos.y = 1 - pos.y;
-				pos.x *= texWidth;
-				pos.y *= texHeight;
-				
-				int x = Mathf.Clamp(Mathf.RoundToInt(pos.x), 0, texWidth - 1);
-				int y = Mathf.Clamp(Mathf.RoundToInt(pos.y), 0, texHeight - 1);
-
-				Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
-				Color pixel = sampleTexture.GetPixel(x, y, 0);
+				Color pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
 				
 				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
 				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
@@ -498,6 +484,24 @@ namespace Vertx
 			//This approach is much smoother than using RequiresConstantRepaint
 			if (continuousRepaint || continuousRepaintOverride)
 				Repaint();
+		}
+
+		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, Texture2D t2d)
+		{
+			Vector2 pos = mousePos - r.position;
+			pos -= r.size / 2f;
+			pos += m_Pos;
+			pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
+			pos /= wantedRect.size;
+			pos.y = 1 - pos.y;
+			pos.x *= texWidth;
+			pos.y *= texHeight;
+				
+			int x = Mathf.Clamp(Mathf.RoundToInt(pos.x - 0.5f), 0, texWidth - 1);
+			int y = Mathf.Clamp(Mathf.RoundToInt(pos.y - 0.5f), 0, texHeight - 1);
+
+			Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
+			return sampleTexture.GetPixel(x, y, 0);
 		}
 
 		private static Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
