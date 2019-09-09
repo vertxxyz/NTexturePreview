@@ -86,6 +86,24 @@ namespace Vertx
 		private static Texture2D _sampleTexture;
 		private static Texture2D _sampleTextureKey;
 
+		private EditorWindow _window;
+		
+		public EditorWindow GetThisWindow()
+		{
+			if (_window != null) return _window;
+			
+			Type type = Type.GetType("UnityEditor.InspectorWindow, UnityEditor");
+			Object[] windows = Resources.FindObjectsOfTypeAll(type);
+			foreach (Object window in windows)
+			{
+				
+			}
+
+			/*window.Show(true);
+			window.ShowNotification(new GUIContent("Locked"), 0.5f);*/
+			return _window;
+		}
+
 		public Texture2D GetSampleTextureFor(Texture2D source)
 		{
 			if (_sampleTextureKey == source && _sampleTexture != null)
@@ -276,7 +294,7 @@ namespace Vertx
 							break;
 					}
 
-					if (e.type != EventType.Repaint)
+					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
 				}
 
@@ -308,7 +326,7 @@ namespace Vertx
 							break;
 					}
 
-					if (e.type != EventType.Repaint)
+					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
 				}
 			}
@@ -455,6 +473,18 @@ namespace Vertx
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
 				Color pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
+
+				if (e.button == 0 && e.type == EventType.MouseDown)
+				{
+					if (e.clickCount == 1)
+					{
+						EditorGUIUtility.systemCopyBuffer = ColorUtility.ToHtmlStringRGBA(pixel);
+					}
+					else
+					{
+						EditorGUIUtility.systemCopyBuffer = $"new Color({pixel.r}f, {pixel.g}f, {pixel.b}f, {pixel.a}f);";
+					}
+				}
 				
 				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
 				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
