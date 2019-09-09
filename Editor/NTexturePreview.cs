@@ -17,7 +17,7 @@ namespace Vertx
 		private static readonly int R = Shader.PropertyToID("_R");
 		private static readonly int G = Shader.PropertyToID("_G");
 		private static readonly int B = Shader.PropertyToID("_B");
-
+		
 		protected void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
@@ -57,38 +57,133 @@ namespace Vertx
 
 		private static Material _rGBAMaterial;
 
-		protected static Material rGBAMaterial
-		{
-			get
-			{
-				if (_rGBAMaterial == null)
-					_rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader"));
-				return _rGBAMaterial;
-			}
-		}
+		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader")) : _rGBAMaterial;
 
 		private static Material _rGBATransparentMaterial;
 
-		protected static Material rGBATransparentMaterial
-		{
-			get
-			{
-				if (_rGBATransparentMaterial == null)
-					_rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader"));
-				return _rGBATransparentMaterial;
-			}
-		}
+		protected static Material rGBATransparentMaterial => _rGBATransparentMaterial == null ? _rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader")) : _rGBATransparentMaterial;
 
 		private static Material _normalsMaterial;
 
-		protected static Material normalsMaterial
-		{
-			get
+		protected static Material normalsMaterial => _normalsMaterial == null ? _normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader")) : _normalsMaterial;
+
+		private static Texture2D _lightCursor;
+
+		protected static Texture2D LightCursor => _lightCursor == null ? _lightCursor = Resources.Load<Texture2D>("LightCursor") : _lightCursor;
+
+		private static Texture2D _pickerCursor;
+
+		protected static Texture2D PickerCursor => _pickerCursor == null ? _pickerCursor = Resources.Load<Texture2D>("PickerCursor") : _pickerCursor;
+
+		private static GUIStyle _pickerLabelStyle;
+
+		protected static GUIStyle PickerLabelStyle =>
+			_pickerLabelStyle ?? (_pickerLabelStyle = new GUIStyle("PreOverlayLabel")
 			{
-				if (_normalsMaterial == null)
-					_normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader"));
-				return _normalsMaterial;
+				alignment = TextAnchor.MiddleLeft
+			});
+		
+		private static Texture2D _sampleTexture;
+		private static Texture2D _sampleTextureKey;
+
+		#region Notification
+		private static GUIStyle _notificationTextStyle;
+		private static GUIStyle _notificationBackgroundStyle;
+		protected static GUIStyle NotificationTextStyle => _notificationTextStyle ?? (_notificationTextStyle = new GUIStyle("NotificationText"));
+		protected static GUIStyle NotificationBackgroundStyle => _notificationBackgroundStyle ?? (_notificationBackgroundStyle = new GUIStyle("NotificationBackground"));
+
+		private readonly GUIContent copiedHexContent = new GUIContent("Copied Hex Value");
+		private readonly GUIContent copiedCodeContent = new GUIContent("Copied Code-Ready Colour Value");
+		private GUIContent activeNotificationContent;
+		private double notificationEndTime;
+		private double notificationFadeoutTime;
+		private Vector2 notificationSize;
+		private bool notificationRepaint;
+
+		void ShowNotification(GUIContent content, double duration)
+		{
+			activeNotificationContent = content;
+			notificationEndTime = EditorApplication.timeSinceStartup + duration;
+			notificationFadeoutTime = notificationEndTime - Math.Min(1, duration);
+			notificationSize = NotificationTextStyle.CalcSize(activeNotificationContent);
+			notificationRepaint = true;
+		}
+		
+		void DrawNotification(Rect position)
+		{
+			if (activeNotificationContent == null) return;
+			if (EditorApplication.timeSinceStartup > notificationEndTime)
+			{
+				activeNotificationContent = null;
+				notificationEndTime = 0;
+				notificationRepaint = false;
+				return;
 			}
+			float targetWidth = position.width - NotificationTextStyle.margin.horizontal;
+			float targetHeight = position.height - NotificationTextStyle.margin.vertical - 20;
+			Vector2 warningSize = notificationSize;
+			
+			GUIStyle scaledNotificationText = NotificationTextStyle;
+			if (targetWidth < notificationSize.x)
+			{
+				float scale = targetWidth / notificationSize.x;
+
+				scaledNotificationText = new GUIStyle(NotificationTextStyle);
+				scaledNotificationText.fontSize = Mathf.FloorToInt(scaledNotificationText.font.fontSize * scale);
+
+				warningSize = scaledNotificationText.CalcSize(activeNotificationContent);
+			}
+
+			warningSize.x += 1; //we'll give the text a little room to breathe to avoid word-wrapping issues with drop shadows
+
+			if (warningSize.y > targetHeight)
+				warningSize.y = targetHeight;
+
+			Rect r = new Rect((position.width - warningSize.x) * .5f, 20 + (position.height - 20 - warningSize.y) * .7f, warningSize.x, warningSize.y);
+
+			double time = EditorApplication.timeSinceStartup;
+			if (time > notificationFadeoutTime)
+				GUI.color = new Color(1, 1, 1, 1 - (float)(time - notificationFadeoutTime));
+			GUI.Label(r, GUIContent.none, NotificationBackgroundStyle);
+			EditorGUI.LabelField(r, activeNotificationContent, scaledNotificationText);
+			GUI.color = Color.white;
+		}
+
+		#endregion
+		
+		
+
+		public Texture2D GetSampleTextureFor(Texture2D source)
+		{
+			if (_sampleTextureKey == source && _sampleTexture != null)
+				return _sampleTexture;
+			if(_sampleTextureKey == null && _sampleTexture != null)
+				DestroyImmediate(_sampleTexture);
+			// Create a temporary RenderTexture of the same size as the texture
+			RenderTexture tmp = RenderTexture.GetTemporary(
+				source.width,
+				source.height,
+				0,
+				RenderTextureFormat.ARGBFloat,
+				RenderTextureReadWrite.Linear);
+
+			// Blit the pixels on texture to the RenderTexture
+			Graphics.Blit(source, tmp);
+			// Backup the currently set RenderTexture
+			RenderTexture previous = RenderTexture.active;
+			// Set the current RenderTexture to the temporary one we created
+			RenderTexture.active = tmp;
+			// Create a new readable Texture2D to copy the pixels to it
+			_sampleTexture = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false, true);
+			// Copy the pixels from the RenderTexture to the new Texture
+			_sampleTexture.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+			_sampleTexture.Apply();
+			// Reset the active RenderTexture
+			RenderTexture.active = previous;
+			// Release the temporary RenderTexture
+			RenderTexture.ReleaseTemporary(tmp);
+			_sampleTextureKey = source;
+			return _sampleTexture;
 		}
 
 		protected override void OnDisable()
@@ -96,12 +191,14 @@ namespace Vertx
 			base.OnDisable();
 			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.
 			//Also, make sure to call any required methods like OnDisable
-			MethodInfo disableMethod = defaultEditor.GetType().GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-			if (disableMethod != null)
-				disableMethod.Invoke(defaultEditor, null);
-			DestroyImmediate(defaultEditor);
-			if(_editor3D != null)
+			if (defaultEditor != null)
+				DestroyImmediate(defaultEditor);
+
+			if (_editor3D != null)
 				DestroyImmediate(_editor3D);
+			
+			if(_sampleTexture != null)
+				DestroyImmediate(_sampleTexture);
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -118,7 +215,7 @@ namespace Vertx
 
 		//Using this for animated recentering
 		private static AnimVector3 animatedPos;
-		
+
 		protected const string noSupportFor3DWithDepth = "3D textures with depth are not supported!";
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
@@ -139,25 +236,28 @@ namespace Vertx
 		//Variables for normal map diffuse preview.
 		private bool continuousRepaint;
 		private float lightZ = 0.1f;
-		
+
 		//Render texture repaint (play)
 		private bool continuousRepaintOverride;
-		
+
 		//3D RenderTexture Support
 		private N3DTexturePreview _editor3D;
-		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) Editor.CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
+		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
+
+		//Colour sampling
+		private bool samplingColour;
 
 		private void PreviewTexture(Rect r, Texture t, GUIStyle background, Event e)
 		{
 			bool isVolume = IsVolume();
-			
+
 			// Render target must be created before we can display it (case 491797)
 			RenderTexture rt = t as RenderTexture;
 			if (rt != null)
 			{
 				if (!SystemInfo.SupportsRenderTextureFormat(rt.format))
 					return; // can't do this RT format
-				if(!isVolume)
+				if (!isVolume)
 					rt.Create();
 			}
 
@@ -179,7 +279,7 @@ namespace Vertx
 					EditorGUI.HelpBox(new Rect(r.x, y, r.width, h), noSupportFor3DWithDepth, MessageType.Error);
 					return;
 				}
-				
+
 				//TODO perhaps support 3D rendertexture settings. Not currently!
 				editor3D.OnPreviewGUI(r, background);
 				return;
@@ -199,7 +299,7 @@ namespace Vertx
 			int texHeight = Mathf.Max(t.height, 1);
 
 			float mipLevel = GetMipLevelForRendering();
-			
+
 			float GetMipLevelForRendering()
 			{
 				if (target == null)
@@ -215,7 +315,7 @@ namespace Vertx
 
 				return Mathf.Min(m_MipLevel, GetMipmapCount(target as Texture) - 1);
 			}
-			
+
 			zoomLevel = Mathf.Min(Mathf.Min(r.width / texWidth, r.height / texHeight), 1);
 			Rect wantedRect = new Rect(r.x, r.y, texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier);
 
@@ -233,6 +333,7 @@ namespace Vertx
 						case EventType.MouseDown:
 							normalsMaterial.EnableKeyword("PREVIEW_DIFFUSE");
 							normalsMaterial.DisableKeyword("PREVIEW_NORMAL");
+							Cursor.SetCursor(LightCursor, new Vector2(16, 16), CursorMode.Auto);
 							continuousRepaint = true;
 							break;
 						case EventType.MouseUp:
@@ -242,11 +343,8 @@ namespace Vertx
 							break;
 					}
 
-					if (e.type != EventType.Repaint)
-					{
+					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
-						Repaint();
-					}
 				}
 
 				if (continuousRepaint)
@@ -256,7 +354,29 @@ namespace Vertx
 					pos += m_Pos;
 					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
 					normalsMaterial.SetFloat(LightX, pos.x / wantedRect.size.x);
-					normalsMaterial.SetFloat(LightY, 1 - (pos.y / wantedRect.size.y));
+					normalsMaterial.SetFloat(LightY, 1 - pos.y / wantedRect.size.y);
+					EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
+				}
+			}
+			else
+			{
+				if (e.button == 1)
+				{
+					switch (e.type)
+					{
+						case EventType.MouseDown:
+							samplingColour = true;
+							continuousRepaintOverride = true;
+							Cursor.SetCursor(PickerCursor, new Vector2(15, 15), CursorMode.Auto);
+							break;
+						case EventType.MouseUp:
+							samplingColour = false;
+							continuousRepaintOverride = false;
+							break;
+					}
+
+					if (e.type != EventType.Repaint && e.type != EventType.Layout && !(e.control || e.command || e.alt))
+						e.Use();
 				}
 			}
 
@@ -278,6 +398,7 @@ namespace Vertx
 
 			if (!hasDragged && e.type == EventType.MouseUp && e.button == 2)
 			{
+				//Middle mouse button click re-centering
 				animatedPos.value = m_Pos;
 				Vector2 tgt = ClampPos(m_Pos + ConvertPositionToLocalTextureRect(r, e.mousePosition), r, texWidth, texHeight, zoomLevel);
 				animatedPos.target = tgt;
@@ -314,14 +435,14 @@ namespace Vertx
 			}
 
 
+			Texture2D t2d = t as Texture2D;
 			{
 				//SCROLL VIEW -----------------------------------------------------------------------------
-				PreviewGUIBeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
+				PreviewGUIUtility.BeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
 
-//            FilterMode oldFilter = t.filterMode;
-//            SetFilterModeNoDirty(t, FilterMode.Point);
+//				FilterMode oldFilter = t.filterMode;
+//				SetFilterModeNoDirty(t, FilterMode.Point);
 
-				Texture2D t2d = t as Texture2D;
 				if (m_ShowAlpha)
 				{
 					#if UNITY_2018_1_OR_NEWER
@@ -393,15 +514,79 @@ namespace Vertx
 
 				//SetFilterModeNoDirty(t, oldFilter);
 
-				m_Pos = PreviewGUIEndScrollView();
+				m_Pos = PreviewGUIUtility.EndScrollView();
 			} //-----------------------------------------------------------------------------------------
+
+			if (samplingColour && t2d != null)
+			{
+				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
+				Vector2 mousePosition = Event.current.mousePosition;
+				Color pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
+
+				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
+				{
+					if (e.clickCount == 1)
+					{
+						EditorGUIUtility.systemCopyBuffer = ColorUtility.ToHtmlStringRGBA(pixel);
+						ShowNotification(copiedHexContent, 1);
+					}
+					else
+					{
+						EditorGUIUtility.systemCopyBuffer = $"new Color({pixel.r}f, {pixel.g}f, {pixel.b}f, {pixel.a}f);";
+						ShowNotification(copiedCodeContent, 1);
+					}
+					if(e.type != EventType.Repaint && e.type != EventType.Layout)
+						e.Use();
+				}
+				
+				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
+				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
+				Rect labelRect;
+				if (mousePosition.x > r.width - labelSize.x)
+				{
+					labelRect = new Rect(mousePosition.x - labelSize.x - 5, mousePosition.y + 5, labelSize.x, 16);
+					PickerLabelStyle.alignment = TextAnchor.MiddleRight;
+				}
+				else
+				{
+					labelRect = new Rect(mousePosition.x + 5, mousePosition.y + 5, labelSize.x, 16);
+					PickerLabelStyle.alignment = TextAnchor.MiddleLeft;
+				}
+				EditorGUI.DrawRect(labelRect, new Color(0f, 0f, 0f, 0.2f));
+				EditorGUI.LabelField(labelRect, label, PickerLabelStyle);
+
+				pixel.a = 1;
+				EditorGUI.DrawRect(new Rect(mousePosition.x - 57, mousePosition.y - 57, 52, 52), Color.black);
+				EditorGUI.DrawRect(new Rect(mousePosition.x - 56, mousePosition.y - 56, 50, 50), pixel);
+			}
 
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
+			
+			DrawNotification(r);
 
-			if (continuousRepaint || continuousRepaintOverride)
+			//This approach is much smoother than using RequiresConstantRepaint
+			if (continuousRepaint || continuousRepaintOverride || notificationRepaint)
 				Repaint();
+		}
+
+		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, Texture2D t2d)
+		{
+			Vector2 pos = mousePos - r.position;
+			pos -= r.size / 2f;
+			pos += m_Pos;
+			pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
+			pos /= wantedRect.size;
+			pos.y = 1 - pos.y;
+			pos.x *= texWidth;
+			pos.y *= texHeight;
+				
+			int x = Mathf.Clamp(Mathf.RoundToInt(pos.x - 0.5f), 0, texWidth - 1);
+			int y = Mathf.Clamp(Mathf.RoundToInt(pos.y - 0.5f), 0, texHeight - 1);
+
+			Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
+			return sampleTexture.GetPixel(x, y, 0);
 		}
 
 		private static Vector2 ConvertPositionToLocalTextureRect(Rect r, Vector2 position)
@@ -454,7 +639,7 @@ namespace Vertx
 				defaultEditor.OnPreviewSettings();
 				return;
 			}
-			
+
 			RenderTexture rT = target as RenderTexture;
 			if (rT != null && IsVolume())
 			{
@@ -732,7 +917,7 @@ namespace Vertx
 			m_SetFilterModeNoDirty.Invoke(null, new object[] {texture, mode});
 		}
 
-		private static Type m_PreviewGUIType;
+		/*private static Type m_PreviewGUIType;
 
 		private static Type PreviewGUIType => m_PreviewGUIType ?? (m_PreviewGUIType = Type.GetType("PreviewGUI, UnityEditor"));
 
@@ -753,7 +938,7 @@ namespace Vertx
 			if (m_PreviewGUIEndScrollView == null)
 				m_PreviewGUIEndScrollView = PreviewGUIType.GetMethod("EndScrollView", BindingFlags.Public | BindingFlags.Static);
 			return (Vector2) m_PreviewGUIEndScrollView.Invoke(null, null);
-		}
+		}*/
 
 		private static MethodInfo m_ApplyWireMaterial;
 
