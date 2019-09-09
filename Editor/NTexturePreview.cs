@@ -86,23 +86,72 @@ namespace Vertx
 		private static Texture2D _sampleTexture;
 		private static Texture2D _sampleTextureKey;
 
-		private EditorWindow _window;
-		
-		public EditorWindow GetThisWindow()
+		#region Notification
+		private static GUIStyle _notificationTextStyle;
+		private static GUIStyle _notificationBackgroundStyle;
+		protected static GUIStyle NotificationTextStyle => _notificationTextStyle ?? (_notificationTextStyle = new GUIStyle("NotificationText"));
+		protected static GUIStyle NotificationBackgroundStyle => _notificationBackgroundStyle ?? (_notificationBackgroundStyle = new GUIStyle("NotificationBackground"));
+
+		private GUIContent copiedHexContent = new GUIContent("Copied Hex Value");
+		private GUIContent copiedCodeContent = new GUIContent("Copied Code-Ready Colour Value");
+		private GUIContent activeNotificationContent;
+		private double notificationEndTime;
+		private double notificationFadeoutTime;
+		private Vector2 notificationSize;
+		private bool notificationRepaint;
+
+		void ShowNotification(GUIContent content, double duration)
 		{
-			if (_window != null) return _window;
-			
-			Type type = Type.GetType("UnityEditor.InspectorWindow, UnityEditor");
-			Object[] windows = Resources.FindObjectsOfTypeAll(type);
-			foreach (Object window in windows)
+			activeNotificationContent = content;
+			notificationEndTime = EditorApplication.timeSinceStartup + duration;
+			notificationFadeoutTime = notificationEndTime - Math.Min(1, duration);
+			notificationSize = NotificationTextStyle.CalcSize(activeNotificationContent);
+			notificationRepaint = true;
+		}
+		
+		void DrawNotification(Rect position)
+		{
+			if (activeNotificationContent == null) return;
+			if (EditorApplication.timeSinceStartup > notificationEndTime)
 			{
-				
+				activeNotificationContent = null;
+				notificationEndTime = 0;
+				notificationRepaint = false;
+				return;
+			}
+			float targetWidth = position.width - NotificationTextStyle.margin.horizontal;
+			float targetHeight = position.height - NotificationTextStyle.margin.vertical - 20;
+			Vector2 warningSize = notificationSize;
+			
+			GUIStyle scaledNotificationText = NotificationTextStyle;
+			if (targetWidth < notificationSize.x)
+			{
+				float scale = targetWidth / notificationSize.x;
+
+				scaledNotificationText = new GUIStyle(NotificationTextStyle);
+				scaledNotificationText.fontSize = Mathf.FloorToInt(scaledNotificationText.font.fontSize * scale);
+
+				warningSize = scaledNotificationText.CalcSize(activeNotificationContent);
 			}
 
-			/*window.Show(true);
-			window.ShowNotification(new GUIContent("Locked"), 0.5f);*/
-			return _window;
+			warningSize.x += 1; //we'll give the text a little room to breathe to avoid word-wrapping issues with drop shadows
+
+			if (warningSize.y > targetHeight)
+				warningSize.y = targetHeight;
+
+			Rect r = new Rect((position.width - warningSize.x) * .5f, 20 + (position.height - 20 - warningSize.y) * .7f, warningSize.x, warningSize.y);
+
+			double time = EditorApplication.timeSinceStartup;
+			if (time > notificationFadeoutTime)
+				GUI.color = new Color(1, 1, 1, 1 - (float)(time - notificationFadeoutTime));
+			GUI.Label(r, GUIContent.none, NotificationBackgroundStyle);
+			EditorGUI.LabelField(r, activeNotificationContent, scaledNotificationText);
+			GUI.color = Color.white;
 		}
+
+		#endregion
+		
+		
 
 		public Texture2D GetSampleTextureFor(Texture2D source)
 		{
@@ -326,7 +375,7 @@ namespace Vertx
 							break;
 					}
 
-					if (e.type != EventType.Repaint && e.type != EventType.Layout)
+					if (e.type != EventType.Repaint && e.type != EventType.Layout && !(e.control || e.command || e.alt))
 						e.Use();
 				}
 			}
@@ -474,16 +523,20 @@ namespace Vertx
 				Vector2 mousePosition = Event.current.mousePosition;
 				Color pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
 
-				if (e.button == 0 && e.type == EventType.MouseDown)
+				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
 				{
 					if (e.clickCount == 1)
 					{
 						EditorGUIUtility.systemCopyBuffer = ColorUtility.ToHtmlStringRGBA(pixel);
+						ShowNotification(copiedHexContent, 1);
 					}
 					else
 					{
 						EditorGUIUtility.systemCopyBuffer = $"new Color({pixel.r}f, {pixel.g}f, {pixel.b}f, {pixel.a}f);";
+						ShowNotification(copiedCodeContent, 1);
 					}
+					if(e.type != EventType.Repaint && e.type != EventType.Layout)
+						e.Use();
 				}
 				
 				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
@@ -510,9 +563,11 @@ namespace Vertx
 			// ReSharper disable once CompareOfFloatsByEqualityOperator
 			if (mipLevel != 0)
 				EditorGUI.DropShadowLabel(new Rect(r.x, r.y, r.width, 20), "Mip " + mipLevel);
+			
+			DrawNotification(r);
 
 			//This approach is much smoother than using RequiresConstantRepaint
-			if (continuousRepaint || continuousRepaintOverride)
+			if (continuousRepaint || continuousRepaintOverride || notificationRepaint)
 				Repaint();
 		}
 
