@@ -17,7 +17,7 @@ namespace Vertx
 		private static readonly int X = Shader.PropertyToID("_X");
 		private static readonly int Y = Shader.PropertyToID("_Y");
 		private static readonly int Z = Shader.PropertyToID("_Z");
-		
+
 		/// <summary>
 		/// An interface for overriding the Material used by this previewer
 		/// </summary>
@@ -125,8 +125,8 @@ namespace Vertx
 					default:
 						continue;
 				}
-				
-				
+
+
 				hasR = hasR || _hasR;
 				hasB = hasB || _hasB;
 				hasG = hasG || _hasG;
@@ -135,7 +135,7 @@ namespace Vertx
 			if (ImplementAxisSliders() && (materialOverride == null || materialOverride.ImplementAxisSliders()))
 			{
 				int width, height, depth;
-				
+
 				switch (target)
 				{
 					case Texture3D texture3D:
@@ -147,11 +147,11 @@ namespace Vertx
 						width = renderTexture.width;
 						height = renderTexture.height;
 						depth = renderTexture.volumeDepth;
-						break; 
+						break;
 					default:
 						return;
 				}
-				
+
 				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
 				{
 					Vector3 size = new Vector3(width, height, depth);
@@ -161,15 +161,15 @@ namespace Vertx
 					{
 						case Axis.X:
 							x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.x - 1);
-							EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 						case Axis.Y:
 							y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.y - 1);
-							EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 						case Axis.Z:
 							z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.z - 1);
-							EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(25));
+							EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 					}
 
@@ -177,6 +177,8 @@ namespace Vertx
 						SetXYZFloats();
 				}
 			}
+
+			continuousRepaint = GUILayout.Toggle(continuousRepaint, s_Styles.playIcon, s_Styles.previewButtonScale);
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
@@ -199,6 +201,9 @@ namespace Vertx
 
 		public Vector2 m_PreviewDir = new Vector2(30, -25);
 		private PreviewRenderUtility m_PreviewUtility;
+
+		//Repaint (play button)
+		private bool continuousRepaint;
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
@@ -225,7 +230,8 @@ namespace Vertx
 				return;
 
 			InitPreview();
-			material3D.mainTexture = target as Texture;
+
+			material3D.mainTexture = target as Texture3D;
 
 			m_PreviewUtility.BeginPreview(r, background);
 			bool oldFog = RenderSettings.fog;
@@ -241,7 +247,8 @@ namespace Vertx
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
 			m_PreviewUtility.EndAndDrawPreview(r);
-			Repaint();
+			if (continuousRepaint)
+				Repaint();
 		}
 
 		void InitPreview()
