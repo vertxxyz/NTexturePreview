@@ -1,22 +1,27 @@
 ﻿using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
-		protected virtual void OnDisable() => SetRGBTo(true, true, true);
+		protected virtual void OnDisable()
+		{
+			SetRGBTo(true, true, true);
+		}
 
 		#region Assets
-		protected Material m_Material3D;
-		protected Material material3D
+		protected static T LoadResource<T>(string nameWithExtension) where T : Object => AssetDatabase.LoadAssetAtPath<T>($"Packages/com.vertx.ntexturepreview/Editor Resources/{nameWithExtension}");
+		
+		protected static Material m_Material3D;
+		protected static Material material3D
 		{
 			get
 			{
 				if (m_Material3D == null)
-					m_Material3D = new Material(Resources.Load<Shader>("RGB3DShader"));
+					m_Material3D = new Material(LoadResource<Shader>("RGB3DShader.shader"));
 				return m_Material3D;
 			}
 		}
@@ -60,7 +65,6 @@ namespace Vertx
 		{
 			m_R = R;
 			rCallback?.Invoke(m_R);
-
 			m_G = G;
 			gCallback?.Invoke(m_G);
 			m_B = B;

@@ -31,7 +31,7 @@ namespace Vertx
 		{
 			defaultEditor.OnInspectorGUI();
 			RenderTexture rt = target as RenderTexture;
-			if (rt != null && IsVolume() && rt.depth != 0)
+			if (rt != null && IsVolume(rt) && rt.depth != 0)
 			{
 				EditorGUILayout.HelpBox(noSupportFor3DWithDepth, MessageType.Error);
 			}
