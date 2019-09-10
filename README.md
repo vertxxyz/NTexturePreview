@@ -10,6 +10,7 @@ Enhanced Texture Previewer for Unity
 - Zoom Resets
 - Matching Filter Mode (default preview is always Point-filtered)
 - Normal Map Diffuse Preview (Right-Mouse, Right-Mouse+Scroll)
+- Colour Picking (Hold Right-Mouse, Left-Click during to copy as hex. Double-Click to copy as code. Alt/Ctrl/Cmd + Right-Click does the same.)
 
 ![gif](http://vertx.xyz/Images/NTexturePreview/2dTexturePreview2.gif)
 
