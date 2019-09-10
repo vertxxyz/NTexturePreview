@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Vertx
 {
@@ -10,13 +10,15 @@ namespace Vertx
 		protected virtual void OnDisable() => SetRGBTo(true, true, true);
 
 		#region Assets
+		protected static T LoadResource<T>(string nameWithExtension) where T : Object => AssetDatabase.LoadAssetAtPath<T>($"Packages/com.vertx.ntexturepreview/Editor Resources/{nameWithExtension}");
+		
 		protected Material m_Material3D;
 		protected Material material3D
 		{
 			get
 			{
 				if (m_Material3D == null)
-					m_Material3D = new Material(Resources.Load<Shader>("RGB3DShader"));
+					m_Material3D = new Material(LoadResource<Shader>("RGB3DShader.shader"));
 				return m_Material3D;
 			}
 		}

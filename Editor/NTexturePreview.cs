@@ -50,30 +50,30 @@ namespace Vertx
 				normalsMaterial.SetFloat(B, b ? 1 : 0);
 			};
 		}
-
+		
 		[SerializeField] float m_MipLevel;
 
 		[SerializeField] protected Vector2 m_Pos;
 
 		private static Material _rGBAMaterial;
 
-		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(Resources.Load<Shader>("RGBShader")) : _rGBAMaterial;
+		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(LoadResource<Shader>("RGBShader.shader")) : _rGBAMaterial;
 
 		private static Material _rGBATransparentMaterial;
 
-		protected static Material rGBATransparentMaterial => _rGBATransparentMaterial == null ? _rGBATransparentMaterial = new Material(Resources.Load<Shader>("RGBAShader")) : _rGBATransparentMaterial;
+		protected static Material rGBATransparentMaterial => _rGBATransparentMaterial == null ? _rGBATransparentMaterial = new Material(LoadResource<Shader>("RGBAShader.shader")) : _rGBATransparentMaterial;
 
 		private static Material _normalsMaterial;
 
-		protected static Material normalsMaterial => _normalsMaterial == null ? _normalsMaterial = new Material(Resources.Load<Shader>("NormalsShader")) : _normalsMaterial;
+		protected static Material normalsMaterial => _normalsMaterial == null ? _normalsMaterial = new Material(LoadResource<Shader>("NormalsShader.shader")) : _normalsMaterial;
 
 		private static Texture2D _lightCursor;
 
-		protected static Texture2D LightCursor => _lightCursor == null ? _lightCursor = Resources.Load<Texture2D>("LightCursor") : _lightCursor;
+		protected static Texture2D LightCursor => _lightCursor == null ? _lightCursor = LoadResource<Texture2D>("LightCursor.png") : _lightCursor;
 
 		private static Texture2D _pickerCursor;
 
-		protected static Texture2D PickerCursor => _pickerCursor == null ? _pickerCursor = Resources.Load<Texture2D>("PickerCursor") : _pickerCursor;
+		protected static Texture2D PickerCursor => _pickerCursor == null ? _pickerCursor = LoadResource<Texture2D>("PickerCursor.png") : _pickerCursor;
 
 		private static GUIStyle _pickerLabelStyle;
 
