@@ -482,12 +482,11 @@ namespace Vertx
 			{
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
-				Color pixel;
-				if(t2d != null)
-					pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
-				else
-					pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
+				Color pixel = t2d != null ?
+					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d) :
+					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
 
+				//Copy shortcuts
 				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
 				{
 					if (e.clickCount == 1)
@@ -504,7 +503,25 @@ namespace Vertx
 					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
 				}
+				else if((e.control || e.command) && e.keyCode == KeyCode.C)
+				{
+					if (!e.shift)
+					{
+						EditorGUIUtility.systemCopyBuffer = ColorUtility.ToHtmlStringRGBA(pixel);
+						ShowNotification(copiedHexContent, 1);
+					}
+					else
+					{
+						EditorGUIUtility.systemCopyBuffer = $"new Color({pixel.r}f, {pixel.g}f, {pixel.b}f, {pixel.a}f);";
+						ShowNotification(copiedCodeContent, 1);
+					}
 
+					if (e.type != EventType.Repaint && e.type != EventType.Layout)
+						e.Use();
+				}
+				//-----------
+
+				//Picker label
 				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
 				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
 				Rect labelRect;
@@ -522,6 +539,7 @@ namespace Vertx
 				EditorGUI.DrawRect(labelRect, new Color(0f, 0f, 0f, 0.2f));
 				EditorGUI.LabelField(labelRect, label, PickerLabelStyle);
 
+				//Picker swatch
 				pixel.a = 1;
 				EditorGUI.DrawRect(new Rect(mousePosition.x - 57, mousePosition.y - 57, 52, 52), Color.black);
 				EditorGUI.DrawRect(new Rect(mousePosition.x - 56, mousePosition.y - 56, 50, 50), pixel);
@@ -550,8 +568,7 @@ namespace Vertx
 		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, RenderTexture rT)
 		{
 			GetPixelPositionUnderCursor(mousePos, r, wantedRect, texWidth, texHeight, out int x, out int y);
-			Texture2D sampleTexture = GetSampleTextureFor(rT);
-			return sampleTexture.GetPixel(x, y, 0);
+			return ReadFromRenderTexture(rT, x, y);
 		}
 
 		public void GetPixelPositionUnderCursor(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, out int x, out int y)
@@ -605,26 +622,24 @@ namespace Vertx
 			return _sampleTexture;
 		}
 		
-		public Texture2D GetSampleTextureFor(RenderTexture source)
+		public Color ReadFromRenderTexture(RenderTexture source, int x, int y)
 		{
-			if (_sampleTextureKey == source && _sampleTexture != null)
-				return _sampleTexture;
-			if (_sampleTextureKey == null && _sampleTexture != null)
-				DestroyImmediate(_sampleTexture);
+			//With Render Textures we need to keep them updated constantly.
 			
 			// Backup the currently set RenderTexture
 			RenderTexture previous = RenderTexture.active;
 			// Set the current RenderTexture to the temporary one we created
 			RenderTexture.active = source;
-			// Create a new readable Texture2D to copy the pixels to it
-			_sampleTexture = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false, true);
+			// Create a new readable Texture2D to copy the pixels to it if we need to
+			if (_sampleTexture == null)
+				_sampleTexture = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
 			// Copy the pixels from the RenderTexture to the new Texture
-			_sampleTexture.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+			_sampleTexture.ReadPixels(new Rect(x, source.height-y-1, 1, 1), 0, 0);
 			_sampleTexture.Apply();
 			// Reset the active RenderTexture
 			RenderTexture.active = previous;
 			_sampleTextureKey = source;
-			return _sampleTexture;
+			return _sampleTexture.GetPixel(0, 0, 0);
 		}
 
 		#endregion
