@@ -10,7 +10,8 @@ Enhanced Texture Previewer for Unity
 - Zoom Resets
 - Matching Filter Mode (default preview is always Point-filtered)
 - Normal Map Diffuse Preview (Right-Mouse, Right-Mouse+Scroll)
-- Colour Picking (Hold Right-Mouse, Left-Click during to copy as hex. Double-Click to copy as code. Alt/Ctrl/Cmd + Right-Click does the same.)
+- Colour Picking (Hold Right-Mouse, Left-Click during to copy as hex. Double-Click to copy as code. CTRL-C and CTRL-SHIFT-C whilst picking are analogous)
+- Continuous Repaint button for Render Textures
 
 ![gif](http://vertx.xyz/Images/NTexturePreview/2dTexturePreview2.gif)
 
@@ -35,6 +36,7 @@ An example is provided at NTexturePreview/Examples/Custom 3D/Editor/N3DTexturePr
 ## Installation
 Ensure your project is on .NET 4.x by navigating to Edit>Project Settings>Player>Configuration>Scripting Runtime Version and switching to .NET 4.x Equivalent.
 
-Pull the project locally and use the Package Manager (Window>Package Manager), adding the package.json file present in the root of the folder with the `+` button.
+Edit your `manifest.json` file to contain:  
+`"com.vertx.ntexturepreview": "https://github.com/vertxxyz/NTexturePreview.git",`
 
-Or edit your `manifest.json` file to contain `"com.vertx.ntexturepreview": "https://github.com/vertxxyz/NTexturePreview.git",`
+Or pull the project locally and use the Package Manager (Window>Package Manager), adding the package.json file present in the root of the folder with the `+` button.
