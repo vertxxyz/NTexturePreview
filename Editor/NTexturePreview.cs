@@ -482,12 +482,11 @@ namespace Vertx
 			{
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
-				Color pixel;
-				if(t2d != null)
-					pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d);
-				else
-					pixel = GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
+				Color pixel = t2d != null ?
+					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d) :
+					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
 
+				//Copy shortcuts
 				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
 				{
 					if (e.clickCount == 1)
@@ -504,7 +503,25 @@ namespace Vertx
 					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
 				}
+				else if((e.control || e.command) && e.keyCode == KeyCode.C)
+				{
+					if (!e.shift)
+					{
+						EditorGUIUtility.systemCopyBuffer = ColorUtility.ToHtmlStringRGBA(pixel);
+						ShowNotification(copiedHexContent, 1);
+					}
+					else
+					{
+						EditorGUIUtility.systemCopyBuffer = $"new Color({pixel.r}f, {pixel.g}f, {pixel.b}f, {pixel.a}f);";
+						ShowNotification(copiedCodeContent, 1);
+					}
 
+					if (e.type != EventType.Repaint && e.type != EventType.Layout)
+						e.Use();
+				}
+				//-----------
+
+				//Picker label
 				string label = $"({pixel.r:F3}, {pixel.g:F3}, {pixel.b:F3}, {pixel.a:F3})";
 				Vector2 labelSize = PickerLabelStyle.CalcSize(new GUIContent(label));
 				Rect labelRect;
@@ -522,6 +539,7 @@ namespace Vertx
 				EditorGUI.DrawRect(labelRect, new Color(0f, 0f, 0f, 0.2f));
 				EditorGUI.LabelField(labelRect, label, PickerLabelStyle);
 
+				//Picker swatch
 				pixel.a = 1;
 				EditorGUI.DrawRect(new Rect(mousePosition.x - 57, mousePosition.y - 57, 52, 52), Color.black);
 				EditorGUI.DrawRect(new Rect(mousePosition.x - 56, mousePosition.y - 56, 50, 50), pixel);
