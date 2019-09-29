@@ -7,10 +7,7 @@ namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
-		protected virtual void OnDisable()
-		{
-			SetRGBTo(true, true, true);
-		}
+		protected virtual void OnDisable() => SetRGBTo(true, true, true);
 
 		#region Assets
 		protected static T LoadResource<T>(string nameWithExtension) where T : Object => AssetDatabase.LoadAssetAtPath<T>($"Packages/com.vertx.ntexturepreview/Editor Resources/{nameWithExtension}");
@@ -171,10 +168,19 @@ namespace Vertx
 				smallZoom = EditorGUIUtility.IconContent("PreTextureMipMapLow");
 				largeZoom = EditorGUIUtility.IconContent("PreTextureMipMapHigh");
 				alphaIcon = EditorGUIUtility.IconContent("PreTextureAlpha");
-				scaleIcon = new GUIContent(EditorGUIUtility.IconContent("ViewToolZoom On")) {image = {filterMode = FilterMode.Bilinear}, tooltip = "Reset Zoom"};
 				RGBIcon = EditorGUIUtility.IconContent("PreTextureRGB");
 				playIcon = new GUIContent(EditorGUIUtility.IconContent("d_Animation.Play")) {tooltip = "Continuous Repaint"};
+				#if UNITY_2019_3_OR_NEWER
+				previewButton = new GUIStyle("preButton")
+				{
+					stretchHeight = true,
+					fixedHeight = 0
+				};
+				scaleIcon = new GUIContent(EditorGUIUtility.IconContent(EditorGUIUtility.isProSkin ? "ScaleTool On" : "ScaleTool")) {image = {filterMode = FilterMode.Bilinear}, tooltip = "Reset Zoom"};
+				#else
 				previewButton = "preButton";
+				scaleIcon = new GUIContent(EditorGUIUtility.IconContent("ViewToolZoom On")) {image = {filterMode = FilterMode.Bilinear}, tooltip = "Reset Zoom"};
+				#endif
 				previewSlider = "preSlider";
 				previewSliderThumb = "preSliderThumb";
 				previewDropDown = "PreDropDown";
@@ -195,7 +201,14 @@ namespace Vertx
 					alignment = TextAnchor.MiddleCenter,
 					normal = {textColor = new Color(1f, 0.28f, 0.33f)}
 				};
-				previewButton_G = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0.45f, 1f, 0.28f)}};
+				previewButton_G = new GUIStyle(previewButton_R) {normal =
+				{
+					#if UNITY_2019_3_OR_NEWER
+					textColor = new Color(0f, 0.698f, 0.062f)
+					#else
+					textColor = new Color(0.45f, 1f, 0.28f)
+					#endif
+				}};
 				previewButton_B = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0f, 0.65f, 1f)}};
 			}
 		}

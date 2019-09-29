@@ -70,12 +70,11 @@ namespace Vertx
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.
-			//Also, make sure to call any required methods like OnDisable
-			MethodInfo disableMethod = defaultEditor.GetType().GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-			if (disableMethod != null)
-				disableMethod.Invoke(defaultEditor, null);
-			DestroyImmediate(defaultEditor);
+			if (defaultEditor != null)
+			{
+				DestroyImmediate(defaultEditor);
+				defaultEditor = null;
+			}
 
 			if (m_PreviewUtility != null)
 			{
