@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2019-09-29
+ - 2019.3 compatibility.
+ - Added sprite pinging (double-click) for sliced sprites.
+ - Removed panning restriction for 1st level zoom (scroll position still resets.)
+ - Added background guide lines
+
 ## [1.0.5] - 2019-09-11
  - Additional colour picking shortcuts with copy hex: CTRL-C and copy as code: CTRL-SHIFT-C.
  - RenderTexture colour picking now updates as it should.

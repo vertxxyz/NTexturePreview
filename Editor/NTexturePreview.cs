@@ -25,7 +25,7 @@ namespace Vertx
 				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
 			animatedPos = new AnimVector3(Vector3.zero, () =>
 			{
-				m_Pos = animatedPos.value;
+				scrollPosition = animatedPos.value;
 				Repaint();
 			})
 			{
@@ -53,7 +53,7 @@ namespace Vertx
 
 		[SerializeField] float m_MipLevel;
 
-		[SerializeField] protected Vector2 m_Pos;
+		[SerializeField] protected Vector2 scrollPosition;
 
 		private static Material _rGBAMaterial;
 
@@ -82,7 +82,7 @@ namespace Vertx
 			{
 				alignment = TextAnchor.MiddleLeft
 			});
-		
+
 		#region Notification
 
 		private static GUIStyle _notificationTextStyle;
@@ -153,16 +153,23 @@ namespace Vertx
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			//When OnDisable is called, the default editor we created should be destroyed to avoid memory leakage.
-			//Also, make sure to call any required methods like OnDisable
 			if (defaultEditor != null)
+			{
 				DestroyImmediate(defaultEditor);
+				defaultEditor = null;
+			}
 
 			if (_editor3D != null)
+			{
 				DestroyImmediate(_editor3D);
+				_editor3D = null;
+			}
 
 			if (_sampleTexture != null)
+			{
 				DestroyImmediate(_sampleTexture);
+				_sampleTexture = null;
+			}
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -314,7 +321,7 @@ namespace Vertx
 				{
 					Vector2 pos = Event.current.mousePosition - r.position;
 					pos -= r.size / 2f;
-					pos += m_Pos;
+					pos += scrollPosition;
 					pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
 					normalsMaterial.SetFloat(LightX, pos.x / wantedRect.size.x);
 					normalsMaterial.SetFloat(LightY, 1 - pos.y / wantedRect.size.y);
@@ -343,16 +350,9 @@ namespace Vertx
 
 			if (e.type == EventType.MouseDrag)
 			{
-				//Don't allow dragging for zoomMultiplier 1
-				if (Math.Abs(zoomMultiplier - 1) < 0.001f)
-				{
-					e.Use();
-					return;
-				}
-
 				hasDragged = true;
-				m_Pos -= e.delta;
-				m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+				scrollPosition -= e.delta;
+				scrollPosition = ClampPos(scrollPosition, r, texWidth, texHeight, zoomLevel);
 				e.Use();
 				Repaint();
 			}
@@ -360,8 +360,8 @@ namespace Vertx
 			if (!hasDragged && e.type == EventType.MouseUp && e.button == 2)
 			{
 				//Middle mouse button click re-centering
-				animatedPos.value = m_Pos;
-				Vector2 tgt = ClampPos(m_Pos + ConvertPositionToLocalTextureRect(r, e.mousePosition), r, texWidth, texHeight, zoomLevel);
+				animatedPos.value = scrollPosition;
+				Vector2 tgt = ClampPos(scrollPosition + ConvertPositionToLocalTextureRect(r, e.mousePosition), r, texWidth, texHeight, zoomLevel);
 				animatedPos.target = tgt;
 				e.Use();
 			}
@@ -384,22 +384,88 @@ namespace Vertx
 					if (Math.Abs(zoomMultiplierLast - zoomMultiplier) > 0.001f)
 					{
 						//Focuses Center
-						Vector2 posNormalized = new Vector2(m_Pos.x / wantedRect.width, m_Pos.y / wantedRect.height);
+						Vector2 posNormalized = new Vector2(scrollPosition.x / wantedRect.width, scrollPosition.y / wantedRect.height);
 						Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
-						m_Pos = newPos;
-						m_Pos = ClampPos(m_Pos, r, texWidth, texHeight, zoomLevel);
+						scrollPosition = newPos;
+						scrollPosition = ClampPos(scrollPosition, r, texWidth, texHeight, zoomLevel);
 					}
+
+					//Reset scroll position if we zoomed out at maximum zoom
+					// ReSharper disable twice CompareOfFloatsByEqualityOperator
+					if (zoomMultiplier == 1 && e.delta.y != 0)
+						scrollPosition = Vector2.zero;
 				}
 
 				e.Use();
 				Repaint();
 			}
 
+			using (new GUI.ClipScope(r))
+			{
+				DrawTexturespaceBackground();
+			}
+
+			void DrawTexturespaceBackground()
+			{
+				if (e.type != EventType.Repaint)
+					return;
+				float size = Mathf.Max(r.width, r.height);
+				Vector2 offset = new Vector2(wantedRect.xMin, wantedRect.xMin);
+
+				float halfSize = size * .5f;
+				float alpha = EditorGUIUtility.isProSkin ? 0.15f : 0.08f;
+				float maxSize = Mathf.Max(texHeight, texWidth);
+				//Alter the grid size based on the texture size
+				float gridBase = Mathf.LerpUnclamped(8, 32, Mathf.Max(512, InverseLerpUnclamped(512, 2048, maxSize)));
+
+				float InverseLerpUnclamped(float a, float b, float value)
+				{
+					if (a != b)
+						return (value - a) / (b - a);
+					return 0.0f;
+				}
+
+				float gridSize = gridBase * zoomLevel * zoomMultiplier;
+				//Offset the grid by the scroll position
+				offset.x -= scrollPosition.x % (gridSize * 2f);
+				offset.y -= scrollPosition.y % (gridSize * 2f);
+
+				BeginLines(new Color(0f, 0f, 0f, alpha));
+				//Start at -gridSize to account for the above offset
+				for (float v = -gridSize; v <= size; v += gridSize)
+					DrawLine(new Vector2(-halfSize + v, halfSize + v) + offset, new Vector2(halfSize + v, -halfSize + v) + offset);
+				EndLines();
+
+				void DrawLine(Vector3 p1, Vector3 p2)
+				{
+					GL.Vertex(p1);
+					GL.Vertex(p2);
+				}
+
+				void BeginLines(Color color)
+				{
+					ApplyWireMaterial();
+					GL.PushMatrix();
+					GL.MultMatrix(Handles.matrix);
+					GL.Begin(GL.LINES);
+					GL.Color(color);
+				}
+
+				void EndLines()
+				{
+					GL.End();
+					GL.PopMatrix();
+				}
+			}
+
+
+			EditorGUI.DrawRect(new Rect(r.xMin, r.yMax, r.width, 1), new Color(0.54f, 0.54f, 0.54f));
+
 
 			Texture2D t2d = t as Texture2D;
 			{
 				//SCROLL VIEW -----------------------------------------------------------------------------
-				PreviewGUIUtility.BeginScrollView(r, m_Pos, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
+				PreviewGUIUtility.BeginScrollView(r, scrollPosition, wantedRect, "PreHorizontalScrollbar", "PreHorizontalScrollbarThumb");
 
 //				FilterMode oldFilter = t.filterMode;
 //				SetFilterModeNoDirty(t, FilterMode.Point);
@@ -433,7 +499,7 @@ namespace Vertx
 				}
 
 				// TODO: Less hacky way to prevent sprite rects to not appear in smaller previews like icons.
-				if (wantedRect.width > 32 && wantedRect.height > 32)
+				if (!samplingColour && wantedRect.width > 32 && wantedRect.height > 32)
 				{
 					string path = AssetDatabase.GetAssetPath(t);
 					TextureImporter textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -455,6 +521,9 @@ namespace Vertx
 						GL.MultMatrix(Handles.matrix);
 						GL.Begin(GL.LINES);
 						GL.Color(new Color(1f, 1f, 1f, 0.5f));
+
+						bool selected = e.type == EventType.MouseDown && e.button == 0 && e.clickCount > 1;
+						Vector2 mP = e.mousePosition;
 						foreach (SpriteMetaData sprite in spritesheet)
 						{
 							Rect spriteRect = sprite.rect;
@@ -462,10 +531,23 @@ namespace Vertx
 							{
 								xMin = screenRect.xMin + screenRect.width * (spriteRect.xMin / t.width * definitionScale),
 								xMax = screenRect.xMin + screenRect.width * (spriteRect.xMax / t.width * definitionScale),
-								yMin = screenRect.yMin + screenRect.height * (1f - spriteRect.yMin / t.height * definitionScale),
-								yMax = screenRect.yMin + screenRect.height * (1f - spriteRect.yMax / t.height * definitionScale)
+								yMax = screenRect.yMin + screenRect.height * (1f - spriteRect.yMin / t.height * definitionScale),
+								yMin = screenRect.yMin + screenRect.height * (1f - spriteRect.yMax / t.height * definitionScale)
 							};
+
 							DrawRect(spriteScreenRect);
+
+							if (!selected || !spriteScreenRect.Contains(mP))
+								continue;
+							Object[] assets = AssetDatabase.LoadAllAssetRepresentationsAtPath(path);
+							string nameQuery = sprite.name;
+							foreach (Object asset in assets)
+							{
+								if (!asset.name.Equals(nameQuery))
+									continue;
+								EditorGUIUtility.PingObject(asset);
+								break;
+							}
 						}
 
 						GL.End();
@@ -475,16 +557,14 @@ namespace Vertx
 
 				//SetFilterModeNoDirty(t, oldFilter);
 
-				m_Pos = PreviewGUIUtility.EndScrollView();
+				scrollPosition = PreviewGUIUtility.EndScrollView();
 			} //-----------------------------------------------------------------------------------------
 
 			if (samplingColour && (t2d != null || rt != null))
 			{
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
-				Color pixel = t2d != null ?
-					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d) :
-					GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
+				Color pixel = t2d != null ? GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d) : GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
 
 				//Copy shortcuts
 				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
@@ -503,7 +583,7 @@ namespace Vertx
 					if (e.type != EventType.Repaint && e.type != EventType.Layout)
 						e.Use();
 				}
-				else if((e.control || e.command) && e.keyCode == KeyCode.C)
+				else if ((e.control || e.command) && e.keyCode == KeyCode.C)
 				{
 					if (!e.shift)
 					{
@@ -555,9 +635,9 @@ namespace Vertx
 			if (continuousRepaint || continuousRepaintOverride || notificationRepaint || samplingColour)
 				Repaint();
 		}
-		
+
 		#region Texture Sampling
-		
+
 		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, Texture2D t2d)
 		{
 			GetPixelPositionUnderCursor(mousePos, r, wantedRect, texWidth, texHeight, out int x, out int y);
@@ -575,7 +655,7 @@ namespace Vertx
 		{
 			Vector2 pos = mousePos - r.position;
 			pos -= r.size / 2f;
-			pos += m_Pos;
+			pos += scrollPosition;
 			pos += new Vector2(texWidth * zoomLevel * zoomMultiplier, texHeight * zoomLevel * zoomMultiplier) / 2f;
 			pos /= wantedRect.size;
 			pos.y = 1 - pos.y;
@@ -588,7 +668,7 @@ namespace Vertx
 
 		private static Texture2D _sampleTexture;
 		private static Texture _sampleTextureKey;
-		
+
 		public Texture2D GetSampleTextureFor(Texture2D source)
 		{
 			if (_sampleTextureKey == source && _sampleTexture != null)
@@ -621,11 +701,11 @@ namespace Vertx
 			_sampleTextureKey = source;
 			return _sampleTexture;
 		}
-		
+
 		public Color ReadFromRenderTexture(RenderTexture source, int x, int y)
 		{
 			//With Render Textures we need to keep them updated constantly.
-			
+
 			// Backup the currently set RenderTexture
 			RenderTexture previous = RenderTexture.active;
 			// Set the current RenderTexture to the temporary one we created
@@ -634,7 +714,7 @@ namespace Vertx
 			if (_sampleTexture == null)
 				_sampleTexture = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
 			// Copy the pixels from the RenderTexture to the new Texture
-			_sampleTexture.ReadPixels(new Rect(x, source.height-y-1, 1, 1), 0, 0);
+			_sampleTexture.ReadPixels(new Rect(x, source.height - y - 1, 1, 1), 0, 0);
 			_sampleTexture.Apply();
 			// Reset the active RenderTexture
 			RenderTexture.active = previous;
@@ -654,7 +734,7 @@ namespace Vertx
 
 		private const float smallestOnScreenNormalisedRect = 0.5f;
 
-		private Vector2 ClampPos(Vector2 m_PosLocal, Rect r, float textureWidth, float textureHeight, float zoomLevel)
+		private Vector2 ClampPos(Vector2 posLocal, Rect r, float textureWidth, float textureHeight, float zoomLevel)
 		{
 			float w2 = textureWidth * zoomLevel * zoomMultiplier;
 			float h2 = textureHeight * zoomLevel * zoomMultiplier;
@@ -663,7 +743,7 @@ namespace Vertx
 			h2 /= 2;
 			w2 += r.width / 2f - smallestOnScreenNormalisedRect * r.width;
 			h2 += r.height / 2f - smallestOnScreenNormalisedRect * r.height;
-			return new Vector2(Mathf.Clamp(m_PosLocal.x, -w2, w2), Mathf.Clamp(m_PosLocal.y, -h2, h2));
+			return new Vector2(Mathf.Clamp(posLocal.x, -w2, w2), Mathf.Clamp(posLocal.y, -h2, h2));
 		}
 
 		private static bool IsNormalMap(Texture t)
@@ -792,19 +872,19 @@ namespace Vertx
 				{
 					int texWidth = Mathf.Max(tex.width, 1);
 					int texHeight = Mathf.Max(tex.height, 1);
-					Vector2 posNormalized = new Vector2(m_Pos.x / (texWidth * zoomLevel * zoomMultiplier), m_Pos.y / (texHeight * zoomLevel * zoomMultiplier));
+					Vector2 posNormalized = new Vector2(scrollPosition.x / (texWidth * zoomLevel * zoomMultiplier), scrollPosition.y / (texHeight * zoomLevel * zoomMultiplier));
 					//Zooms to 100
 					zoomMultiplier = p100;
 
 					//Focuses Center
 					Vector2 newPos = new Vector2(posNormalized.x * (texWidth * zoomLevel * zoomMultiplier), posNormalized.y * (texHeight * zoomLevel * zoomMultiplier));
-					m_Pos = newPos;
+					scrollPosition = newPos;
 				}
 				else
 				{
 					//Zooms to default
 					zoomMultiplier = 1;
-					m_Pos = Vector2.zero;
+					scrollPosition = Vector2.zero;
 				}
 
 				Repaint();
@@ -996,7 +1076,7 @@ namespace Vertx
 		private static void ApplyWireMaterial()
 		{
 			if (m_ApplyWireMaterial == null)
-				m_ApplyWireMaterial = typeof(HandleUtility).GetMethod("ApplyWireMaterial", BindingFlags.NonPublic | BindingFlags.Static);
+				m_ApplyWireMaterial = typeof(HandleUtility).GetMethod("ApplyWireMaterial", BindingFlags.NonPublic | BindingFlags.Static, null, new Type[] { }, null);
 			m_ApplyWireMaterial.Invoke(null, null);
 		}
 
@@ -1018,7 +1098,12 @@ namespace Vertx
 		private static void GUICalculateScaledTextureRects(Rect position, ScaleMode scaleMode, float imageAspect, ref Rect outScreenRect, ref Rect outSourceRect)
 		{
 			if (m_GUICalculateScaledTextureRects == null)
+			{
 				m_GUICalculateScaledTextureRects = typeof(GUI).GetMethod("CalculateScaledTextureRects", BindingFlags.NonPublic | BindingFlags.Instance);
+				if (m_GUICalculateScaledTextureRects == null)
+					m_GUICalculateScaledTextureRects = typeof(GUI).GetMethod("CalculateScaledTextureRects", BindingFlags.NonPublic | BindingFlags.Static);
+			}
+
 			object[] results = {position, scaleMode, imageAspect, outScreenRect, outSourceRect};
 			m_GUICalculateScaledTextureRects.Invoke(null, results);
 			outScreenRect = (Rect) results[3];

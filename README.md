@@ -12,6 +12,7 @@ Enhanced Texture Previewer for Unity
 - Normal Map Diffuse Preview (Right-Mouse, Right-Mouse+Scroll)
 - Colour Picking (Hold Right-Mouse, Left-Click during to copy as hex. Double-Click to copy as code. CTRL-C and CTRL-SHIFT-C whilst picking are analogous)
 - Continuous Repaint button for Render Textures
+- Sprite pinging for sliced sprites (double-click)
 
 ![gif](http://vertx.xyz/Images/NTexturePreview/2dTexturePreview2.gif)
 
