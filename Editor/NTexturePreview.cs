@@ -416,7 +416,7 @@ namespace Vertx
 				float alpha = EditorGUIUtility.isProSkin ? 0.15f : 0.08f;
 				float maxSize = Mathf.Max(texHeight, texWidth);
 				//Alter the grid size based on the texture size
-				float gridBase = Mathf.LerpUnclamped(8, 32, Mathf.Max(512, InverseLerpUnclamped(512, 2048, maxSize)));
+				float gridBase = Mathf.LerpUnclamped(8, 32, InverseLerpUnclamped(512, 2048, Mathf.Max(512, maxSize)));
 
 				float InverseLerpUnclamped(float a, float b, float value)
 				{
