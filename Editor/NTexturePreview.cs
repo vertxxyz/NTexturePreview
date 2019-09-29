@@ -389,10 +389,10 @@ namespace Vertx
 						scrollPosition = newPos;
 						scrollPosition = ClampPos(scrollPosition, r, texWidth, texHeight, zoomLevel);
 					}
-					
+
 					//Reset scroll position if we zoomed out at maximum zoom
 					// ReSharper disable twice CompareOfFloatsByEqualityOperator
-					if(zoomMultiplier == 1 && e.delta.y != 0)
+					if (zoomMultiplier == 1 && e.delta.y != 0)
 						scrollPosition = Vector2.zero;
 				}
 
@@ -416,7 +416,7 @@ namespace Vertx
 				float alpha = EditorGUIUtility.isProSkin ? 0.15f : 0.08f;
 				float maxSize = Mathf.Max(texHeight, texWidth);
 				//Alter the grid size based on the texture size
-				float gridBase = Mathf.LerpUnclamped(8, 32, InverseLerpUnclamped(512, 2048, maxSize));
+				float gridBase = Mathf.LerpUnclamped(8, 32, Mathf.Max(512, InverseLerpUnclamped(512, 2048, maxSize)));
 
 				float InverseLerpUnclamped(float a, float b, float value)
 				{
@@ -457,10 +457,10 @@ namespace Vertx
 					GL.PopMatrix();
 				}
 			}
-			
-			
+
+
 			EditorGUI.DrawRect(new Rect(r.xMin, r.yMax, r.width, 1), new Color(0.54f, 0.54f, 0.54f));
-			
+
 
 			Texture2D t2d = t as Texture2D;
 			{
@@ -534,9 +534,9 @@ namespace Vertx
 								yMax = screenRect.yMin + screenRect.height * (1f - spriteRect.yMin / t.height * definitionScale),
 								yMin = screenRect.yMin + screenRect.height * (1f - spriteRect.yMax / t.height * definitionScale)
 							};
-						
+
 							DrawRect(spriteScreenRect);
-							
+
 							if (!selected || !spriteScreenRect.Contains(mP))
 								continue;
 							Object[] assets = AssetDatabase.LoadAllAssetRepresentationsAtPath(path);
