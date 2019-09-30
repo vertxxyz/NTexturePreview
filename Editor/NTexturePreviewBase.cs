@@ -11,17 +11,6 @@ namespace Vertx
 
 		#region Assets
 		protected static T LoadResource<T>(string nameWithExtension) where T : Object => AssetDatabase.LoadAssetAtPath<T>($"Packages/com.vertx.ntexturepreview/Editor Resources/{nameWithExtension}");
-		
-		protected static Material m_Material3D;
-		protected static Material material3D
-		{
-			get
-			{
-				if (m_Material3D == null)
-					m_Material3D = new Material(LoadResource<Shader>("RGB3DShader.shader"));
-				return m_Material3D;
-			}
-		}
 
 		private Mesh mesh;
 		protected Mesh Mesh
@@ -191,10 +180,16 @@ namespace Vertx
 					fixedWidth = 20
 				};
 				previewLabel = new GUIStyle("preLabel")
+					#if UNITY_2019_3_OR_NEWER
+					;
+				if(!EditorGUIUtility.isProSkin)
+					previewLabel.normal.textColor = new Color(0.22f, 0.22f, 0.22f);
+				#else
 				{
 					// UpperCenter centers the mip icons vertically better than MiddleCenter
 					alignment = TextAnchor.UpperCenter
 				};
+				#endif
 				previewButton_R = new GUIStyle(previewButton)
 				{
 					padding = new RectOffset(5, 5, 0, 0),
