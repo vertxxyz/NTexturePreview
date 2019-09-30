@@ -17,6 +17,17 @@ namespace Vertx
 		private static readonly int X = Shader.PropertyToID("_X");
 		private static readonly int Y = Shader.PropertyToID("_Y");
 		private static readonly int Z = Shader.PropertyToID("_Z");
+		
+		protected static Material m_Material3D;
+		protected static Material material3D
+		{
+			get
+			{
+				if (m_Material3D == null)
+					m_Material3D = new Material(LoadResource<Shader>("RGB3DShader.shader"));
+				return m_Material3D;
+			}
+		}
 
 		/// <summary>
 		/// An interface for overriding the Material used by this previewer
@@ -27,7 +38,7 @@ namespace Vertx
 			/// Return a custom Material for N3DTexturePreview
 			/// </summary>
 			/// <returns>The Material used by the N3DTexturePreview if not null</returns>
-			Material GetMaterial(Texture3D texture3D);
+			Material GetMaterial(Texture texture3D);
 
 			bool ImplementAxisSliders();
 		}
@@ -43,24 +54,34 @@ namespace Vertx
 			).Invoke(null, new object[] {typeof(I3DMaterialOverride)});
 
 			//Safe cast to allow Render Texture 3D to fall-back to this class.
-			Texture3D texture3D = target as Texture3D;
+			Texture texture3D = target as Texture;
 			if (texture3D != null)
 			{
 				foreach (Type i3DMaterialOverrideType in i3DMaterialOverrideTypes)
 				{
 					I3DMaterialOverride i3DMaterialOverride = (I3DMaterialOverride) Activator.CreateInstance(i3DMaterialOverrideType);
-					m_Material3D = i3DMaterialOverride.GetMaterial(texture3D);
-					if (m_Material3D != null)
-					{
-						materialOverride = i3DMaterialOverride;
-						break;
-					}
+					override3DMaterial = i3DMaterialOverride.GetMaterial(texture3D);
+					if (override3DMaterial == null)
+						continue;
+					materialOverride = i3DMaterialOverride;
+					break;
 				}
 			}
 
-			rCallback = r => { material3D.SetFloat(R, r ? 1 : 0); };
-			gCallback = g => { material3D.SetFloat(G, g ? 1 : 0); };
-			bCallback = b => { material3D.SetFloat(B, b ? 1 : 0); };
+			rCallback = r => {
+				Material m = override3DMaterial != null ? override3DMaterial : material3D;
+				m.SetFloat(R, r ? 1 : 0);
+			};
+			gCallback = g =>
+			{
+				Material m = override3DMaterial != null ? override3DMaterial : material3D;
+				m.SetFloat(G, g ? 1 : 0);
+			};
+			bCallback = b =>
+			{
+				Material m = override3DMaterial != null ? override3DMaterial : material3D;
+				m.SetFloat(B, b ? 1 : 0);
+			};
 			x = 1;
 			y = 1;
 			z = 1;
@@ -81,6 +102,9 @@ namespace Vertx
 				m_PreviewUtility.Cleanup();
 				m_PreviewUtility = null;
 			}
+			
+			if(override3DMaterial != null)
+				DestroyImmediate(override3DMaterial);
 		}
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
@@ -155,19 +179,23 @@ namespace Vertx
 				{
 					Vector3 size = new Vector3(width, height, depth);
 					Vector3 sizeCurrent = new Vector3(x * (size.x - 1) + 1, y * (size.y - 1) + 1, z * (size.z - 1) + 1);
+					#if UNITY_2019_3_OR_NEWER
+					axis = (Axis) EditorGUILayout.EnumPopup(axis, s_Styles.previewDropDown, GUILayout.Width(30));
+					#else
 					axis = (Axis) EditorGUILayout.EnumPopup(axis, s_Styles.previewDropDown, GUILayout.Width(25));
+					#endif
 					switch (axis)
 					{
 						case Axis.X:
-							x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.x - 1);
+							x = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.x, 1, (int) size.x, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / Mathf.Max(1, size.x - 1);
 							EditorGUILayout.LabelField(sizeCurrent.x.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 						case Axis.Y:
-							y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.y - 1);
+							y = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.y, 1, (int) size.y, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / Mathf.Max(1, size.y - 1);
 							EditorGUILayout.LabelField(sizeCurrent.y.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 						case Axis.Z:
-							z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / (size.z - 1);
+							z = Mathf.RoundToInt(GUILayout.HorizontalSlider((int) sizeCurrent.z, 1, (int) size.z, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.Width(200)) - 1) / Mathf.Max(1, size.z - 1);
 							EditorGUILayout.LabelField(sizeCurrent.z.ToString(), s_Styles.previewLabel, GUILayout.Width(35));
 							break;
 					}
@@ -192,9 +220,10 @@ namespace Vertx
 
 		void SetXYZFloats()
 		{
-			material3D.SetFloat(X, x);
-			material3D.SetFloat(Y, y);
-			material3D.SetFloat(Z, z);
+			Material m = override3DMaterial != null ? override3DMaterial : material3D;
+			m.SetFloat(X, x);
+			m.SetFloat(Y, y);
+			m.SetFloat(Z, z);
 			Repaint();
 		}
 
@@ -230,7 +259,11 @@ namespace Vertx
 
 			InitPreview();
 
-			material3D.mainTexture = target as Texture3D;
+			Material m = override3DMaterial != null ? override3DMaterial : material3D;
+			if (target is CustomRenderTexture customRenderTexture)
+				m.mainTexture = customRenderTexture;
+			else
+				m.mainTexture = target as Texture3D;
 
 			m_PreviewUtility.BeginPreview(r, background);
 			bool oldFog = RenderSettings.fog;
@@ -241,7 +274,7 @@ namespace Vertx
 
 			cameraTransform.rotation = Quaternion.identity;
 			Quaternion rot = Quaternion.Euler(m_PreviewDir.y, 0, 0) * Quaternion.Euler(0, m_PreviewDir.x, 0);
-			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, material3D, 0);
+			m_PreviewUtility.DrawMesh(Mesh, Vector3.zero, rot, m, 0);
 			m_PreviewUtility.Render();
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
@@ -259,6 +292,7 @@ namespace Vertx
 		}
 
 		private I3DMaterialOverride materialOverride;
+		private Material override3DMaterial;
 
 		#region PreviewGUI
 
