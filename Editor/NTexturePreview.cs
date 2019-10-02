@@ -861,7 +861,8 @@ namespace Vertx
 //				Selection.activeObject = previewShader;
 //			}
 
-			if (rT != null)
+			//if (rT != null)
+			if(tex.isReadable)
 				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
