@@ -30,6 +30,7 @@
 			
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma shader_feature_local __ LINEAR
 			
 			
 			#include "UnityCG.cginc"
@@ -67,6 +68,12 @@
 			float4 frag (v2f i) : SV_Target
 			{
 				float4 col = tex2Dlod(_MainTex, float4(i.uv, 0, _Mip));
+				
+                #if LINEAR
+                //De-Linearize
+                col.xyz = pow(col.xyz, 0.454545);
+                #endif
+                
 				col = float4(col.r*_R, col.g*_G, col.b*_B, col.a*_A);
 				float _ROnly = lerp(lerp(_R, 0, _G), 0, _B);
 				float _GOnly = lerp(lerp(_G, 0, _R), 0, _B);

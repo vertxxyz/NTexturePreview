@@ -27,6 +27,7 @@
 			
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma shader_feature_local __ LINEAR
 			
 			
 			#include "UnityCG.cginc"
@@ -65,6 +66,12 @@
 			{
 			    clip(tex2D(_GUIClipTexture, i.clipUV).a-0.5);
 				float3 col = tex2Dlod(_MainTex, float4(i.uv,0,_Mip)).rgb;
+				
+				#if LINEAR
+                //De-Linearize
+                col.xyz = pow(col.xyz, 0.454545);
+                #endif
+				
 				col = float3(col.r*_R, col.g*_G, col.b*_B);
 				float _ROnly = lerp(lerp(_R, 0, _G), 0, _B);
 				float _GOnly = lerp(lerp(_G, 0, _R), 0, _B);

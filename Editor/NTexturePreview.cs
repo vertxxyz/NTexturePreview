@@ -33,35 +33,46 @@ namespace Vertx
 			};
 			rCallback = r =>
 			{
+				rGBMaterial.SetFloat(R, r ? 1 : 0);
 				rGBAMaterial.SetFloat(R, r ? 1 : 0);
-				rGBATransparentMaterial.SetFloat(R, r ? 1 : 0);
 				normalsMaterial.SetFloat(R, r ? 1 : 0);
 			};
 			gCallback = g =>
 			{
+				rGBMaterial.SetFloat(G, g ? 1 : 0);
 				rGBAMaterial.SetFloat(G, g ? 1 : 0);
-				rGBATransparentMaterial.SetFloat(G, g ? 1 : 0);
 				normalsMaterial.SetFloat(G, g ? 1 : 0);
 			};
 			bCallback = b =>
 			{
+				rGBMaterial.SetFloat(B, b ? 1 : 0);
 				rGBAMaterial.SetFloat(B, b ? 1 : 0);
-				rGBATransparentMaterial.SetFloat(B, b ? 1 : 0);
 				normalsMaterial.SetFloat(B, b ? 1 : 0);
 			};
+
+			if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+			{
+				rGBMaterial.EnableKeyword("LINEAR");
+				rGBAMaterial.EnableKeyword("LINEAR");
+			}
+			else
+			{
+				rGBMaterial.DisableKeyword("LINEAR");
+				rGBAMaterial.DisableKeyword("LINEAR");
+			}
 		}
 
 		[SerializeField] float m_MipLevel;
 
 		[SerializeField] protected Vector2 scrollPosition;
 
+		private static Material _rGBMaterial;
+
+		protected static Material rGBMaterial => _rGBMaterial == null ? _rGBMaterial = new Material(LoadResource<Shader>("RGBShader.shader")) : _rGBMaterial;
+
 		private static Material _rGBAMaterial;
 
-		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(LoadResource<Shader>("RGBShader.shader")) : _rGBAMaterial;
-
-		private static Material _rGBATransparentMaterial;
-
-		protected static Material rGBATransparentMaterial => _rGBATransparentMaterial == null ? _rGBATransparentMaterial = new Material(LoadResource<Shader>("RGBAShader.shader")) : _rGBATransparentMaterial;
+		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(LoadResource<Shader>("RGBAShader.shader")) : _rGBAMaterial;
 
 		private static Material _normalsMaterial;
 
@@ -483,14 +494,14 @@ namespace Vertx
 					float imageAspect = t.width / (float) t.height;
 					DrawTransparencyCheckerTexture(wantedRect, ScaleMode.StretchToFill, imageAspect);
 					#if UNITY_2018_1_OR_NEWER
-					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
+					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBAMaterial, ScaleMode.StretchToFill, imageAspect, mipLevel);
 					#else
 					EditorGUI.DrawPreviewTexture(wantedRect, t, rGBATransparentMaterial, ScaleMode.StretchToFill, imageAspect);
 					#endif
 				}
 				else
 				{
-					Material matToUse = isNormalMap ? normalsMaterial : rGBAMaterial;
+					Material matToUse = isNormalMap ? normalsMaterial : rGBMaterial;
 					#if UNITY_2018_1_OR_NEWER
 					EditorGUI.DrawPreviewTexture(wantedRect, t, matToUse, ScaleMode.StretchToFill, 0, mipLevel);
 					#else
@@ -917,8 +928,8 @@ namespace Vertx
 					m_MipLevel = Mathf.Round(GUILayout.HorizontalSlider(m_MipLevel, mipCount - 1, 0, s_Styles.previewSlider, s_Styles.previewSliderThumb, GUILayout.MaxWidth(64)));
 					if (changeCheckScope.changed)
 					{
+						rGBMaterial.SetFloat(Mip, m_MipLevel);
 						rGBAMaterial.SetFloat(Mip, m_MipLevel);
-						rGBATransparentMaterial.SetFloat(Mip, m_MipLevel);
 						Repaint();
 					}
 				}
