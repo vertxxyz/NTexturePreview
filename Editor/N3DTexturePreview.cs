@@ -43,7 +43,7 @@ namespace Vertx
 			bool ImplementAxisSliders();
 		}
 
-		void OnEnable()
+		protected override void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
 			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.Texture3DInspector, UnityEditor"));
@@ -86,6 +86,7 @@ namespace Vertx
 			y = 1;
 			z = 1;
 			SetXYZFloats();
+			base.OnEnable();
 		}
 
 		protected override void OnDisable()
@@ -205,7 +206,12 @@ namespace Vertx
 				}
 			}
 
-			continuousRepaint = GUILayout.Toggle(continuousRepaint, s_Styles.playIcon, s_Styles.previewButtonScale);
+			using (var cCS = new EditorGUI.ChangeCheckScope())
+			{
+				bool to = GUILayout.Toggle(ContinuousRepaint, s_Styles.playIcon, s_Styles.previewButtonScale);
+				if (cCS.changed)
+					ContinuousRepaint = to;
+			}
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
@@ -229,9 +235,6 @@ namespace Vertx
 
 		public Vector2 m_PreviewDir = new Vector2(30, -25);
 		private PreviewRenderUtility m_PreviewUtility;
-
-		//Repaint (play button)
-		private bool continuousRepaint;
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
@@ -279,7 +282,7 @@ namespace Vertx
 
 			Unsupported.SetRenderSettingsUseFogNoDirty(oldFog);
 			m_PreviewUtility.EndAndDrawPreview(r);
-			if (continuousRepaint)
+			if (ContinuousRepaint)
 				Repaint();
 		}
 
