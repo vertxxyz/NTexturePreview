@@ -23,6 +23,22 @@ namespace Vertx
 			}
 		}
 		#endregion
+		
+		private const string continuousRepaintPrefsKey = "vertx_ContinuousRepaint";
+
+		private bool continuousRepaint;
+		//Render texture repaint (play)
+		protected bool ContinuousRepaint
+		{
+			get => continuousRepaint;
+			set
+			{
+				continuousRepaint = value;
+				EditorPrefs.SetBool(continuousRepaintPrefsKey, continuousRepaint);
+			}
+		}
+
+		protected virtual void OnEnable() => continuousRepaint = EditorPrefs.GetBool(continuousRepaintPrefsKey);
 
 		protected enum TextureUsageMode
 		{
@@ -44,7 +60,17 @@ namespace Vertx
 			RealtimeLightmapRGBM = 9,
 		}
 
-		protected Editor defaultEditor;
+		private Editor _defaultEditor;
+		protected Editor defaultEditor
+		{
+			get => _defaultEditor;
+			set
+			{
+				if(_defaultEditor == null)
+					DestroyImmediate(_defaultEditor);
+				_defaultEditor = value;
+			}
+		}
 		private bool m_R = true, m_G = true, m_B = true;
 
 		private void SetRGBTo(bool R, bool G, bool B)

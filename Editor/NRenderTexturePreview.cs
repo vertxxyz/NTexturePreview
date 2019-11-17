@@ -8,7 +8,7 @@ namespace Vertx
 	[CustomEditor(typeof(RenderTexture), true), CanEditMultipleObjects]
 	public class NRenderTexturePreview : NTexturePreview
 	{
-		new void OnEnable()
+		protected override void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
 			if (defaultEditor == null)
@@ -27,6 +27,7 @@ namespace Vertx
 			}
 		}
 
-		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
+		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) =>
+			defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 	}
 }

@@ -18,8 +18,8 @@ namespace Vertx
 		private static readonly int R = Shader.PropertyToID("_R");
 		private static readonly int G = Shader.PropertyToID("_G");
 		private static readonly int B = Shader.PropertyToID("_B");
-
-		protected void OnEnable()
+		
+		protected override void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
 			if (defaultEditor == null)
@@ -63,6 +63,7 @@ namespace Vertx
 				rGBAMaterial.DisableKeyword("LINEAR");
 			}
 			#endif
+			base.OnEnable();
 		}
 
 		[SerializeField] float m_MipLevel;
@@ -222,11 +223,8 @@ namespace Vertx
 		}
 
 		//Variables for normal map diffuse preview.
-		private bool continuousRepaint;
-		private float lightZ = 0.1f;
-
-		//Render texture repaint (play)
 		private bool continuousRepaintOverride;
+		private float lightZ = 0.1f;
 
 		//3D RenderTexture Support
 		private N3DTexturePreview _editor3D;
@@ -321,12 +319,12 @@ namespace Vertx
 							normalsMaterial.EnableKeyword("PREVIEW_DIFFUSE");
 							normalsMaterial.DisableKeyword("PREVIEW_NORMAL");
 							Cursor.SetCursor(LightCursor, new Vector2(16, 16), CursorMode.Auto);
-							continuousRepaint = true;
+							continuousRepaintOverride = true;
 							break;
 						case EventType.MouseUp:
 							normalsMaterial.DisableKeyword("PREVIEW_DIFFUSE");
 							normalsMaterial.EnableKeyword("PREVIEW_NORMAL");
-							continuousRepaint = false;
+							continuousRepaintOverride = false;
 							break;
 					}
 
@@ -334,7 +332,7 @@ namespace Vertx
 						e.Use();
 				}
 
-				if (continuousRepaint)
+				if (continuousRepaintOverride)
 				{
 					Vector2 pos = Event.current.mousePosition - r.position;
 					pos -= r.size / 2f;
@@ -385,7 +383,7 @@ namespace Vertx
 
 			if (e.type == EventType.ScrollWheel)
 			{
-				if (continuousRepaint)
+				if (continuousRepaintOverride)
 				{
 					lightZ = Mathf.Clamp(lightZ + e.delta.y * 0.01f, 0.01f, 1f);
 					normalsMaterial.SetFloat(LightZ, lightZ);
@@ -651,7 +649,7 @@ namespace Vertx
 			DrawNotification(r);
 
 			//This approach is much smoother than using RequiresConstantRepaint
-			if (continuousRepaint || continuousRepaintOverride || notificationRepaint || samplingColour)
+			if (continuousRepaintOverride || ContinuousRepaint || notificationRepaint || samplingColour)
 				Repaint();
 		}
 
@@ -882,7 +880,14 @@ namespace Vertx
 
 			//if (rT != null)
 			if (tex.isReadable)
-				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
+			{
+				using (var cCS = new EditorGUI.ChangeCheckScope())
+				{
+					bool to = GUILayout.Toggle(ContinuousRepaint, s_Styles.playIcon, s_Styles.previewButtonScale);
+					if (cCS.changed)
+						ContinuousRepaint = to;
+				}
+			}
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))
 			{
