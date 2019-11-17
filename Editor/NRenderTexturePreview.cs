@@ -11,19 +11,10 @@ namespace Vertx
 		new void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
-			if(defaultEditor == null)
+			if (defaultEditor == null)
 				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.RenderTextureEditor, UnityEditor"));
-			base.OnEnable();
-		}
 
-		protected override void OnDisable()
-		{
-			base.OnDisable();
-			if (defaultEditor != null)
-			{
-				DestroyImmediate(defaultEditor);
-				defaultEditor = null;
-			}
+			base.OnEnable();
 		}
 
 		public override void OnInspectorGUI()

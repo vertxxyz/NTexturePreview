@@ -80,7 +80,7 @@
 				    lerp(lerp(col.r, col.g, _GOnly), col.b, _BOnly),
 				    lerp(lerp(col.g, col.r, _ROnly), col.b, _BOnly),
 				    lerp(lerp(col.b, col.r, _ROnly), col.g, _GOnly));
-				return float4(col, 1);
+				return float4(saturate(col), 1);
 			}
 			ENDCG
 		}

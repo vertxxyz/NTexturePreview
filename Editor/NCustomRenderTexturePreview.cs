@@ -10,7 +10,9 @@ namespace Vertx
 		new void OnEnable()
 		{
 			//When this inspector is created, also create the built-in inspector
-			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.CustomRenderTextureEditor, UnityEditor"));
+			if (defaultEditor == null)
+				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.CustomRenderTextureEditor, UnityEditor"));
+
 			base.OnEnable();
 		}
 	}

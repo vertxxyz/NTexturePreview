@@ -2,6 +2,7 @@
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
+using UnityEditor.Experimental;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
@@ -50,6 +51,7 @@ namespace Vertx
 				normalsMaterial.SetFloat(B, b ? 1 : 0);
 			};
 
+			#if UNITY_2019_3_OR_NEWER
 			if (QualitySettings.activeColorSpace == ColorSpace.Linear)
 			{
 				rGBMaterial.EnableKeyword("LINEAR");
@@ -60,6 +62,7 @@ namespace Vertx
 				rGBMaterial.DisableKeyword("LINEAR");
 				rGBAMaterial.DisableKeyword("LINEAR");
 			}
+			#endif
 		}
 
 		[SerializeField] float m_MipLevel;
@@ -91,7 +94,9 @@ namespace Vertx
 		protected static GUIStyle PickerLabelStyle =>
 			_pickerLabelStyle ?? (_pickerLabelStyle = new GUIStyle("PreOverlayLabel")
 			{
-				alignment = TextAnchor.MiddleLeft
+				alignment = TextAnchor.MiddleLeft,
+				font = EditorResources.Load<Font>("consola.ttf"),
+				fontSize = 14
 			});
 
 		#region Notification
@@ -185,7 +190,8 @@ namespace Vertx
 
 		public override void OnInspectorGUI() => defaultEditor.OnInspectorGUI();
 
-		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
+		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) =>
+			defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 
 		public override bool HasPreviewGUI() => target != null;
 
@@ -575,7 +581,9 @@ namespace Vertx
 			{
 				EditorGUIUtility.AddCursorRect(r, MouseCursor.CustomCursor);
 				Vector2 mousePosition = Event.current.mousePosition;
-				Color pixel = t2d != null ? GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d) : GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
+				Color pixel = t2d != null
+					? GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, t2d)
+					: GetColorFromMousePosition(mousePosition, r, wantedRect, texWidth, texHeight, rt);
 
 				//Copy shortcuts
 				if ((e.button == 0 || e.control || e.command || e.alt) && e.type == EventType.MouseDown)
@@ -873,7 +881,7 @@ namespace Vertx
 //			}
 
 			//if (rT != null)
-			if(tex.isReadable)
+			if (tex.isReadable)
 				continuousRepaintOverride = GUILayout.Toggle(continuousRepaintOverride, s_Styles.playIcon, s_Styles.previewButtonScale);
 
 			if (GUILayout.Button(s_Styles.scaleIcon, s_Styles.previewButtonScale))

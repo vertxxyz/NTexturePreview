@@ -83,7 +83,7 @@
 				    lerp(lerp(col.g, col.r, _ROnly), col.b, _BOnly),
 				    lerp(lerp(col.b, col.r, _ROnly), col.g, _GOnly), col.a);
 				col.a *= tex2D(_GUIClipTexture, i.clipUV).a;
-				return col;
+				return saturate(col);
 			}
 			ENDCG
 		}
