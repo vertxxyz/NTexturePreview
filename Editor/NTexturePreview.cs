@@ -96,7 +96,9 @@ namespace Vertx
 			_pickerLabelStyle ?? (_pickerLabelStyle = new GUIStyle("PreOverlayLabel")
 			{
 				alignment = TextAnchor.MiddleLeft,
+				#if UNITY_2019_1_OR_NEWER
 				font = EditorResources.Load<Font>("consola.ttf"),
+				#endif
 				fontSize = 14
 			});
 
@@ -659,7 +661,11 @@ namespace Vertx
 		{
 			GetPixelPositionUnderCursor(mousePos, r, wantedRect, texWidth, texHeight, out int x, out int y);
 			Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
-			return sampleTexture.GetPixel(x, y, 0);
+			#if UNITY_2019_1_OR_NEWER
+            return _sampleTexture.GetPixel(x, y, 0);
+            #else
+            return _sampleTexture.GetPixel(x, y);
+            #endif
 		}
 
 		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, RenderTexture rT)
@@ -736,7 +742,11 @@ namespace Vertx
 			// Reset the active RenderTexture
 			RenderTexture.active = previous;
 			_sampleTextureKey = source;
+			#if UNITY_2019_1_OR_NEWER
 			return _sampleTexture.GetPixel(0, 0, 0);
+			#else
+			return _sampleTexture.GetPixel(0, 0);
+			#endif
 		}
 
 		#endregion
