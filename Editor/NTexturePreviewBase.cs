@@ -63,7 +63,7 @@ namespace Vertx
 		private Editor _defaultEditor;
 		protected Editor defaultEditor
 		{
-			get => _defaultEditor;
+			get => _defaultEditor == null ? _defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor")) : _defaultEditor;
 			set
 			{
 				if(_defaultEditor == null)
@@ -71,16 +71,23 @@ namespace Vertx
 				_defaultEditor = value;
 			}
 		}
-		private bool m_R = true, m_G = true, m_B = true;
+		private bool toggleR = true, toggleG = true, toggleB = true;
 
-		private void SetRGBTo(bool R, bool G, bool B)
+		private void SetRGBTo(bool r, bool g, bool b)
 		{
-			m_R = R;
-			rCallback?.Invoke(m_R);
-			m_G = G;
-			gCallback?.Invoke(m_G);
-			m_B = B;
-			bCallback?.Invoke(m_B);
+			if (r == toggleR && g == toggleG && b == toggleB)
+			{
+				r = true;
+				g = true;
+				b = true;
+			}
+			
+			toggleR = r;
+			rCallback?.Invoke(toggleR);
+			toggleG = g;
+			gCallback?.Invoke(toggleG);
+			toggleB = b;
+			bCallback?.Invoke(toggleB);
 		}
 
 		protected Action<bool> rCallback;
@@ -100,21 +107,23 @@ namespace Vertx
 			{
 				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
 				{
-					m_R = !GUILayout.Toggle(!m_R, "R", s_Styles.previewButton_R);
+					bool newR = !GUILayout.Toggle(!toggleR, "R", s_Styles.previewButton_R);
 					if (changeCheckScope.changed)
 					{
 						if (!Event.current.control)
-						{
-							rCallback?.Invoke(m_R);
-						}
-						else
 							SetRGBTo(true, false, false);
+						else
+						{
+							rCallback?.Invoke(newR);
+							toggleR = newR;
+						}
+
 
 						Repaint();
 					}
 				}
 
-				if (m_R)
+				if (toggleR)
 					allOff = false;
 			}
 
@@ -122,21 +131,22 @@ namespace Vertx
 			{
 				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
 				{
-					m_G = !GUILayout.Toggle(!m_G, "G", s_Styles.previewButton_G);
+					bool newG = !GUILayout.Toggle(!toggleG, "G", s_Styles.previewButton_G);
 					if (changeCheckScope.changed)
 					{
 						if (!Event.current.control)
-						{
-							gCallback?.Invoke(m_G);
-						}
-						else
 							SetRGBTo(false, true, false);
+						else
+						{
+							gCallback?.Invoke(newG);
+							toggleG = newG;
+						}
 
 						Repaint();
 					}
 				}
 
-				if (m_G)
+				if (toggleG)
 					allOff = false;
 			}
 
@@ -144,21 +154,22 @@ namespace Vertx
 			{
 				using (EditorGUI.ChangeCheckScope changeCheckScope = new EditorGUI.ChangeCheckScope())
 				{
-					m_B = !GUILayout.Toggle(!m_B, "B", s_Styles.previewButton_B);
+					bool newB = !GUILayout.Toggle(!toggleB, "B", s_Styles.previewButton_B);
 					if (changeCheckScope.changed)
 					{
 						if (!Event.current.control)
-						{
-							bCallback?.Invoke(m_B);
-						}
-						else
 							SetRGBTo(false, false, true);
+						else
+						{
+							bCallback?.Invoke(newB);
+							toggleB = newB;
+						}
 
 						Repaint();
 					}
 				}
 
-				if (m_B)
+				if (toggleB)
 					allOff = false;
 			}
 
@@ -231,6 +242,28 @@ namespace Vertx
 					#endif
 				}};
 				previewButton_B = new GUIStyle(previewButton_R) {normal = {textColor = new Color(0f, 0.65f, 1f)}};
+
+				UnifyGUIStyle(previewButton_R);
+				UnifyGUIStyle(previewButton_G);
+				UnifyGUIStyle(previewButton_B);
+				
+				void UnifyGUIStyle(GUIStyle style)
+				{
+					Color color = style.normal.textColor;
+					//style.onNormal.textColor = color;
+					style.active.textColor = color;
+					style.onActive.textColor = color;
+					style.focused.textColor = color;
+					style.onFocused.textColor = color;
+					style.hover.textColor = color;
+					style.onHover.textColor = color;
+					Texture2D[] backgrounds = style.normal.scaledBackgrounds;
+					style.onNormal.scaledBackgrounds = backgrounds;
+					style.focused.scaledBackgrounds = backgrounds;
+					style.onFocused.scaledBackgrounds = backgrounds;
+					style.hover.scaledBackgrounds = backgrounds;
+					style.onHover.scaledBackgrounds = backgrounds;
+				}
 			}
 		}
 
