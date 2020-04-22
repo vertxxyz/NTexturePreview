@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEditor.Experimental;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
@@ -18,12 +19,9 @@ namespace Vertx
 		private static readonly int R = Shader.PropertyToID("_R");
 		private static readonly int G = Shader.PropertyToID("_G");
 		private static readonly int B = Shader.PropertyToID("_B");
-		
+
 		protected override void OnEnable()
 		{
-			//When this inspector is created, also create the built-in inspector
-			if (defaultEditor == null)
-				defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor"));
 			animatedPos = new AnimVector3(Vector3.zero, () =>
 			{
 				scrollPosition = animatedPos.value;
@@ -96,7 +94,9 @@ namespace Vertx
 			_pickerLabelStyle ?? (_pickerLabelStyle = new GUIStyle("PreOverlayLabel")
 			{
 				alignment = TextAnchor.MiddleLeft,
+				#if UNITY_2019_1_OR_NEWER
 				font = EditorResources.Load<Font>("consola.ttf"),
+				#endif
 				fontSize = 14
 			});
 
@@ -169,6 +169,7 @@ namespace Vertx
 
 		protected override void OnDisable()
 		{
+			base.OnDisable();
 			base.OnDisable();
 			if (defaultEditor != null)
 			{
@@ -659,7 +660,18 @@ namespace Vertx
 		{
 			GetPixelPositionUnderCursor(mousePos, r, wantedRect, texWidth, texHeight, out int x, out int y);
 			Texture2D sampleTexture = t2d.isReadable ? t2d : GetSampleTextureFor(t2d);
-			return sampleTexture.GetPixel(x, y, 0);
+			#if UNITY_2019_1_OR_NEWER
+			Color color = sampleTexture.GetPixel(x, y, 0);
+			#else
+            Color color = sampleTexture.GetPixel(x, y);
+			#endif
+			bool linear = GraphicsFormatUtility.GetLinearFormat(t2d.graphicsFormat) == t2d.graphicsFormat;
+			if (!linear)
+				color = Delinearize();
+			return color;
+
+			Color Delinearize()
+				=> new Color(Mathf.Pow(color.r, 0.454545f), Mathf.Pow(color.b, 0.454545f), Mathf.Pow(color.g, 0.454545f), color.a);
 		}
 
 		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, RenderTexture rT)
@@ -736,7 +748,11 @@ namespace Vertx
 			// Reset the active RenderTexture
 			RenderTexture.active = previous;
 			_sampleTextureKey = source;
+			#if UNITY_2019_1_OR_NEWER
 			return _sampleTexture.GetPixel(0, 0, 0);
+			#else
+			return _sampleTexture.GetPixel(0, 0);
+			#endif
 		}
 
 		#endregion
@@ -915,7 +931,9 @@ namespace Vertx
 				Repaint();
 			}
 
-			if (!alphaOnly)
+			bool isNormalMap = IsNormalMap(tex);
+
+			if (!alphaOnly && !isNormalMap)
 				DrawRGBToggles(hasR, hasG, hasB);
 
 			if (alphaOnly)
@@ -929,7 +947,7 @@ namespace Vertx
 				showMode = false;
 			}
 
-			if (showMode && !IsNormalMap(tex))
+			if (showMode && !isNormalMap)
 				m_ShowAlpha = GUILayout.Toggle(m_ShowAlpha, m_ShowAlpha ? s_Styles.alphaIcon : s_Styles.RGBIcon, s_Styles.previewButton);
 
 			if (mipCount > 1)

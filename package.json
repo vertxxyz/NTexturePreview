@@ -1,13 +1,18 @@
 {
   "name": "com.vertx.ntexturepreview",
   "displayName":  "nTexturePreview",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "unity": "2018.3",
   "description": "Enhanced Texture Previewer for Unity",
-  "keywords": [ "Editor" ],
-  "category": "Tools",
-  "dependencies": {
+  "author": {
+    "name": "Thomas Ingram",
+    "url": "http://vertx.xyz/"
   },
+  "keywords": [
+    "Editor"
+  ],
+  "category": "Tools",
+  "dependencies": {},
   "samples": [
    {
      "displayName": "Example Textures",
