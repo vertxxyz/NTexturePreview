@@ -43,11 +43,10 @@ namespace Vertx
 			bool ImplementAxisSliders();
 		}
 
+		protected override string DefaultEditorString => "UnityEditor.Texture3DInspector, UnityEditor";
+
 		protected override void OnEnable()
 		{
-			//When this inspector is created, also create the built-in inspector
-			defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.Texture3DInspector, UnityEditor"));
-
 			//Find all types of I3DMaterialOverride, and query whether there's a valid material for the current target.
 			IEnumerable<Type> i3DMaterialOverrideTypes = (IEnumerable<Type>) Type.GetType("UnityEditor.EditorAssemblies, UnityEditor").GetMethod(
 				"GetAllTypesWithInterface", BindingFlags.NonPublic | BindingFlags.Static, null, new[] {typeof(Type)}, null
@@ -92,11 +91,6 @@ namespace Vertx
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			if (defaultEditor != null)
-			{
-				DestroyImmediate(defaultEditor);
-				defaultEditor = null;
-			}
 
 			if (m_PreviewUtility != null)
 			{
@@ -112,7 +106,9 @@ namespace Vertx
 
 		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => defaultEditor.RenderStaticPreview(assetPath, subAssets, width, height);
 
+#pragma warning disable 414
 		private float zoom = 3f;
+#pragma warning restore 414
 
 		protected float x = 1, y = 1, z = 1;
 
@@ -128,11 +124,14 @@ namespace Vertx
 		public override void OnPreviewSettings()
 		{
 			defaultEditor.OnPreviewSettings();
+#if !UNITY_2020_1_OR_NEWER
 			PreviewSettings();
+#endif
 		}
 
 		public void PreviewSettings()
 		{
+			
 			bool hasR = false, hasG = false, hasB = false;
 			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
 			foreach (Object texture in targets)
@@ -238,6 +237,10 @@ namespace Vertx
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
+			#if UNITY_2020_1_OR_NEWER
+			defaultEditor.OnPreviewGUI(r, background);
+			#else
+			
 			if (!ShaderUtil.hardwareSupportsRectRenderTexture || !SystemInfo.supports3DTextures)
 			{
 				if (Event.current.type == EventType.Repaint)
@@ -284,6 +287,7 @@ namespace Vertx
 			m_PreviewUtility.EndAndDrawPreview(r);
 			if (ContinuousRepaint)
 				Repaint();
+			#endif
 		}
 
 		void InitPreview()

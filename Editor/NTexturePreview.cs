@@ -48,19 +48,6 @@ namespace Vertx
 				rGBAMaterial.SetFloat(B, b ? 1 : 0);
 				normalsMaterial.SetFloat(B, b ? 1 : 0);
 			};
-
-			#if UNITY_2019_3_OR_NEWER
-			if (QualitySettings.activeColorSpace == ColorSpace.Linear)
-			{
-				rGBMaterial.EnableKeyword("LINEAR");
-				rGBAMaterial.EnableKeyword("LINEAR");
-			}
-			else
-			{
-				rGBMaterial.DisableKeyword("LINEAR");
-				rGBAMaterial.DisableKeyword("LINEAR");
-			}
-			#endif
 			base.OnEnable();
 		}
 
@@ -68,13 +55,25 @@ namespace Vertx
 
 		[SerializeField] protected Vector2 scrollPosition;
 
+		static Material LoadColorMaterial(string fileNameWithExtension)
+		{
+			var material = new Material(LoadResource<Shader>(fileNameWithExtension));
+			#if UNITY_2019_3_OR_NEWER
+			if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+				material.EnableKeyword("LINEAR");
+			else
+				material.DisableKeyword("LINEAR");
+			#endif
+			return material;
+		}
+
 		private static Material _rGBMaterial;
 
-		protected static Material rGBMaterial => _rGBMaterial == null ? _rGBMaterial = new Material(LoadResource<Shader>("RGBShader.shader")) : _rGBMaterial;
+		protected static Material rGBMaterial => _rGBMaterial == null ? _rGBMaterial = LoadColorMaterial("RGBShader.shader") : _rGBMaterial;
 
 		private static Material _rGBAMaterial;
 
-		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = new Material(LoadResource<Shader>("RGBAShader.shader")) : _rGBAMaterial;
+		protected static Material rGBAMaterial => _rGBAMaterial == null ? _rGBAMaterial = LoadColorMaterial("RGBAShader.shader") : _rGBAMaterial;
 
 		private static Material _normalsMaterial;
 
@@ -170,12 +169,6 @@ namespace Vertx
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			base.OnDisable();
-			if (defaultEditor != null)
-			{
-				DestroyImmediate(defaultEditor);
-				defaultEditor = null;
-			}
 
 			if (_editor3D != null)
 			{
@@ -210,6 +203,14 @@ namespace Vertx
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
+			#if VERTX_DEBUG_MODE
+			if (onlyShowDefaultEditor)
+			{
+				defaultEditor.OnPreviewGUI(r, background);
+				return;
+			}
+			#endif
+			
 			Event e = Event.current;
 
 			if (e.type == EventType.Repaint)
@@ -229,7 +230,19 @@ namespace Vertx
 
 		//3D RenderTexture Support
 		private N3DTexturePreview _editor3D;
-		private N3DTexturePreview editor3D => _editor3D == null ? _editor3D = (N3DTexturePreview) CreateEditor(targets, typeof(N3DTexturePreview)) : _editor3D;
+		private N3DTexturePreview editor3D
+		{
+			get
+			{
+				if (_editor3D == null)
+				{
+					Debug.Log("GET");
+					return _editor3D = (N3DTexturePreview) CreateEditor(targets, typeof(N3DTexturePreview));
+				}
+				else
+					return _editor3D;
+			}
+		}
 
 		//Colour sampling
 		private bool samplingColour;
@@ -665,14 +678,23 @@ namespace Vertx
 			#else
             Color color = sampleTexture.GetPixel(x, y);
 			#endif
-			bool linear = GraphicsFormatUtility.GetLinearFormat(t2d.graphicsFormat) == t2d.graphicsFormat;
-			if (!linear)
-				color = Delinearize();
-			return color;
-
-			Color Delinearize()
-				=> new Color(Mathf.Pow(color.r, 0.454545f), Mathf.Pow(color.b, 0.454545f), Mathf.Pow(color.g, 0.454545f), color.a);
+			return HandleDelinearization(t2d, color);
 		}
+
+		private static Color HandleDelinearization(Texture texture, Color color)
+		{
+			#if UNITY_2020_1_OR_NEWER
+			color = Delinearize(color);
+			#else
+			bool linear = GraphicsFormatUtility.GetLinearFormat(texture.graphicsFormat) == texture.graphicsFormat;
+			if (!linear)
+				color = Delinearize(color);
+			#endif
+			return color;
+		}
+		
+		private static Color Delinearize(Color color)
+			=> new Color(Mathf.Pow(color.r, 0.454545f), Mathf.Pow(color.g, 0.454545f), Mathf.Pow(color.b, 0.454545f), color.a);
 
 		private Color GetColorFromMousePosition(Vector2 mousePos, Rect r, Rect wantedRect, int texWidth, int texHeight, RenderTexture rT)
 		{
@@ -749,10 +771,11 @@ namespace Vertx
 			RenderTexture.active = previous;
 			_sampleTextureKey = source;
 			#if UNITY_2019_1_OR_NEWER
-			return _sampleTexture.GetPixel(0, 0, 0);
+			Color color = _sampleTexture.GetPixel(0, 0, 0);
 			#else
-			return _sampleTexture.GetPixel(0, 0);
+			Color color = _sampleTexture.GetPixel(0, 0);
 			#endif
+			return HandleDelinearization(source, color);
 		}
 
 		#endregion
@@ -887,13 +910,6 @@ namespace Vertx
 				}
 			}
 
-//			if (GUILayout.Button("PreviewColor2D.shader"))
-//			{
-//				
-//				Shader previewShader = (Shader)EditorGUIUtility.LoadRequired("Previews/PreviewColor2D.shader");
-//				Selection.activeObject = previewShader;
-//			}
-
 			//if (rT != null)
 			if (tex.isReadable)
 			{
@@ -967,6 +983,11 @@ namespace Vertx
 
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
 			}
+			
+			#if VERTX_DEBUG_MODE
+			if(GUILayout.Button(onlyShowDefaultEditor ? "VERTX" : "DEFAULT", EditorStyles.toolbarButton))
+				onlyShowDefaultEditor = !onlyShowDefaultEditor;
+			#endif
 		}
 
 		public static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
