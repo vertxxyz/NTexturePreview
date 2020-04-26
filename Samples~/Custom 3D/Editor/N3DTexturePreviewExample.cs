@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿#if !UNITY_2020_1_OR_NEWER
+using UnityEngine;
 
 namespace Vertx
 {
@@ -11,3 +12,4 @@ namespace Vertx
 		public bool ImplementAxisSliders() => false;
 	}
 }
+#endif

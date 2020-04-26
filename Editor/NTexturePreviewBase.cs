@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -7,7 +8,15 @@ namespace Vertx
 {
 	public class NTexturePreviewBase : Editor
 	{
-		protected virtual void OnDisable() => SetRGBTo(true, true, true);
+		protected virtual void OnDisable()
+		{
+			SetRGBTo(true, true, true);
+			if (_defaultEditor != null)
+			{
+				DestroyImmediate(_defaultEditor);
+				_defaultEditor = null;
+			}
+		}
 
 		#region Assets
 		protected static T LoadResource<T>(string nameWithExtension) where T : Object => AssetDatabase.LoadAssetAtPath<T>($"Packages/com.vertx.ntexturepreview/Editor Resources/{nameWithExtension}");
@@ -60,17 +69,26 @@ namespace Vertx
 			RealtimeLightmapRGBM = 9,
 		}
 
+		protected virtual string DefaultEditorString => "UnityEditor.TextureInspector, UnityEditor";
+		
 		private Editor _defaultEditor;
 		protected Editor defaultEditor
 		{
-			get => _defaultEditor == null ? _defaultEditor = CreateEditor(targets, Type.GetType("UnityEditor.TextureInspector, UnityEditor")) : _defaultEditor;
+			get
+			{
+				if (_defaultEditor != null) return _defaultEditor;
+				if(targets == null || targets.Length == 0 || targets.Any(a=> a == null))
+					Debug.LogError("NULL");
+				return _defaultEditor = CreateEditor(targets, Type.GetType(DefaultEditorString));
+			}
 			set
 			{
-				if(_defaultEditor == null)
+				if(_defaultEditor != null)
 					DestroyImmediate(_defaultEditor);
 				_defaultEditor = value;
 			}
 		}
+
 		private bool toggleR = true, toggleG = true, toggleB = true;
 
 		private void SetRGBTo(bool r, bool g, bool b)
