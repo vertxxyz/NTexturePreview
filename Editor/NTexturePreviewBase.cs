@@ -69,6 +69,10 @@ namespace Vertx
 		}
 
 		protected virtual string DefaultEditorString => "UnityEditor.TextureInspector, UnityEditor";
+
+		#if VERTX_DEBUG_MODE
+		protected bool onlyShowDefaultEditor = false;
+		#endif
 		
 		private Editor _defaultEditor;
 		protected Editor defaultEditor
