@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -70,6 +69,10 @@ namespace Vertx
 		}
 
 		protected virtual string DefaultEditorString => "UnityEditor.TextureInspector, UnityEditor";
+
+		#if VERTX_DEBUG_MODE
+		protected bool onlyShowDefaultEditor = false;
+		#endif
 		
 		private Editor _defaultEditor;
 		protected Editor defaultEditor
@@ -77,8 +80,6 @@ namespace Vertx
 			get
 			{
 				if (_defaultEditor != null) return _defaultEditor;
-				if(targets == null || targets.Length == 0 || targets.Any(a=> a == null))
-					Debug.LogError("NULL");
 				return _defaultEditor = CreateEditor(targets, Type.GetType(DefaultEditorString));
 			}
 			set

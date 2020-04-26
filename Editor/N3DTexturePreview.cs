@@ -131,6 +131,7 @@ namespace Vertx
 
 		public void PreviewSettings()
 		{
+			
 			bool hasR = false, hasG = false, hasB = false;
 			// ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
 			foreach (Object texture in targets)

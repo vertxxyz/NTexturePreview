@@ -203,6 +203,14 @@ namespace Vertx
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
+			#if VERTX_DEBUG_MODE
+			if (onlyShowDefaultEditor)
+			{
+				defaultEditor.OnPreviewGUI(r, background);
+				return;
+			}
+			#endif
+			
 			Event e = Event.current;
 
 			if (e.type == EventType.Repaint)
@@ -670,9 +678,18 @@ namespace Vertx
 			#else
             Color color = sampleTexture.GetPixel(x, y);
 			#endif
-			//bool linear = GraphicsFormatUtility.GetLinearFormat(t2d.graphicsFormat) == t2d.graphicsFormat;
-			//if (!linear)
+			return HandleDelinearization(t2d, color);
+		}
+
+		private static Color HandleDelinearization(Texture texture, Color color)
+		{
+			#if UNITY_2020_1_OR_NEWER
 			color = Delinearize(color);
+			#else
+			bool linear = GraphicsFormatUtility.GetLinearFormat(texture.graphicsFormat) == texture.graphicsFormat;
+			if (!linear)
+				color = Delinearize(color);
+			#endif
 			return color;
 		}
 		
@@ -754,10 +771,11 @@ namespace Vertx
 			RenderTexture.active = previous;
 			_sampleTextureKey = source;
 			#if UNITY_2019_1_OR_NEWER
-			return Delinearize(_sampleTexture.GetPixel(0, 0, 0));
+			Color color = _sampleTexture.GetPixel(0, 0, 0);
 			#else
-			return Delinearize(_sampleTexture.GetPixel(0, 0));
+			Color color = _sampleTexture.GetPixel(0, 0);
 			#endif
+			return HandleDelinearization(source, color);
 		}
 
 		#endregion
@@ -892,13 +910,6 @@ namespace Vertx
 				}
 			}
 
-//			if (GUILayout.Button("PreviewColor2D.shader"))
-//			{
-//				
-//				Shader previewShader = (Shader)EditorGUIUtility.LoadRequired("Previews/PreviewColor2D.shader");
-//				Selection.activeObject = previewShader;
-//			}
-
 			//if (rT != null)
 			if (tex.isReadable)
 			{
@@ -972,6 +983,11 @@ namespace Vertx
 
 				GUILayout.Box(s_Styles.largeZoom, s_Styles.previewLabel);
 			}
+			
+			#if VERTX_DEBUG_MODE
+			if(GUILayout.Button(onlyShowDefaultEditor ? "VERTX" : "DEFAULT", EditorStyles.toolbarButton))
+				onlyShowDefaultEditor = !onlyShowDefaultEditor;
+			#endif
 		}
 
 		public static void CheckRGBFormats(TextureFormat textureFormat, out bool hasR, out bool hasG, out bool hasB)
