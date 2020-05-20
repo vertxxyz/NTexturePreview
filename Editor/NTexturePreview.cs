@@ -57,7 +57,10 @@ namespace Vertx
 
 		static Material LoadColorMaterial(string fileNameWithExtension)
 		{
-			var material = new Material(LoadResource<Shader>(fileNameWithExtension));
+			Shader shader = LoadResource<Shader>(fileNameWithExtension);
+			if (shader == null)
+				return new Material(Shader.Find("Unlit/Texture"));
+			var material = new Material(shader);
 			#if UNITY_2019_3_OR_NEWER
 			if (QualitySettings.activeColorSpace == ColorSpace.Linear)
 				material.EnableKeyword("LINEAR");
