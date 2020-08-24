@@ -206,6 +206,13 @@ namespace Vertx
 
 		public override void OnPreviewGUI(Rect r, GUIStyle background)
 		{
+			//Crude test to see if shaders have properly loaded.
+			if (_rGBMaterial == null && LoadResource<Shader>("RGBShader.shader") == null)
+			{
+				defaultEditor.OnPreviewGUI(r, background);
+				return;
+			}
+			
 			#if VERTX_DEBUG_MODE
 			if (onlyShowDefaultEditor)
 			{
@@ -457,7 +464,7 @@ namespace Vertx
 					return 0.0f;
 				}
 
-				float gridSize = gridBase * zoomLevel * zoomMultiplier;
+				float gridSize = Mathf.Abs(gridBase * zoomLevel * zoomMultiplier);
 				//Offset the grid by the scroll position
 				offset.x -= scrollPosition.x % (gridSize * 2f);
 				offset.y -= scrollPosition.y % (gridSize * 2f);
